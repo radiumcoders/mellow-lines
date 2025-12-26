@@ -17,6 +17,20 @@ export const AVAILABLE_THEMES: readonly ShikiThemeChoice[] = [
   "vitesse-light",
 ] as const
 
+export const AVAILABLE_LANGUAGES = [
+  "javascript",
+  "typescript",
+  "tsx",
+  "jsx",
+  "json",
+  "sql",
+  "css",
+  "html",
+  "markdown",
+  "bash",
+  "shell",
+] as const
+
 /**
  * Determine if a Shiki theme is light or dark for rendering purposes.
  */

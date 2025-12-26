@@ -7,7 +7,8 @@ import { drawCodeFrame } from "./lib/magicMove/canvasRenderer"
 import { calculateCanvasHeight, layoutTokenLinesToCanvas, makeDefaultLayoutConfig } from "./lib/magicMove/codeLayout"
 import type { LayoutResult } from "./lib/magicMove/codeLayout"
 import { parseMagicMove } from "./lib/magicMove/parseMagicMove"
-import { AVAILABLE_THEMES, getThemeVariant, shikiTokenizeToLines, type ShikiThemeChoice } from "./lib/magicMove/shikiHighlighter"
+import { AVAILABLE_LANGUAGES, AVAILABLE_THEMES, getThemeVariant, shikiTokenizeToLines, type ShikiThemeChoice } from "./lib/magicMove/shikiHighlighter"
+import type { MagicMoveStep, SimpleStep, UIMode } from "./lib/magicMove/types"
 import { recordCanvasToWebm } from "./lib/video/recordCanvas"
 
 type StepLayout = {
@@ -147,6 +148,68 @@ WHERE t.name = 'postgres';
   const [transitionMs, setTransitionMs] = useState<number>(800);
   const [forceLineNumbers, setForceLineNumbers] = useState<boolean>(false);
 
+  // Simple mode state
+  const [mode, setMode] = useState<UIMode>("simple");
+  const [simpleSteps, setSimpleSteps] = useState<SimpleStep[]>([
+    {
+      code: `// Step 1: Simple boolean state
+import { useState } from 'react';
+
+export function AuthButton() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleLogin = async () => {
+    setIsLoading(true);
+    await new Promise(r => setTimeout(r, 1000));
+    setIsLoggedIn(true);
+    setIsLoading(false);
+  };
+
+  return (
+    <button onClick={handleLogin}>
+      {isLoading ? 'Connecting...' : isLoggedIn ? 'Logout' : 'Login'}
+    </button>
+  );
+}`
+    },
+    {
+      code: `// Step 2: Encapsulated Reducer Logic
+import { useReducer } from 'react';
+
+type State = { status: 'idle' | 'loading' | 'authenticated' };
+type Action = { type: 'LOGIN_START' } | { type: 'LOGIN_SUCCESS' };
+
+function authReducer(state: State, action: Action): State {
+  switch (action.type) {
+    case 'LOGIN_START': return { status: 'loading' };
+    case 'LOGIN_SUCCESS': return { status: 'authenticated' };
+    default: return state;
+  }
+}
+
+export function AuthButton() {
+  const [state, dispatch] = useReducer(authReducer, { status: 'idle' });
+
+  const handleLogin = async () => {
+    dispatch({ type: 'LOGIN_START' });
+    await new Promise(r => setTimeout(r, 1000));
+    dispatch({ type: 'LOGIN_SUCCESS' });
+  };
+
+  return (
+    <button onClick={handleLogin} disabled={state.status === 'loading'}>
+      {state.status === 'loading' ? 'Connecting...' :
+       state.status === 'authenticated' ? 'Logout' : 'Login'}
+    </button>
+  );
+}`
+    }
+  ]);
+  const [selectedLang, setSelectedLang] = useState<string>("typescript");
+  const [simpleShowLineNumbers, setSimpleShowLineNumbers] = useState<boolean>(true);
+  const [simpleStartLine, setSimpleStartLine] = useState<number>(1);
+
   const parsed = useMemo(() => parseMagicMove(input), [input]);
   const [blockIndex, setBlockIndex] = useState(0);
 
@@ -158,10 +221,32 @@ WHERE t.name = 'postgres';
   }, [parsed.blocks.length]);
 
   const activeBlock = parsed.blocks[blockIndex] ?? null;
-  const steps = useMemo(() => activeBlock?.steps ?? [], [activeBlock]);
+
+  // Compute steps based on mode
+  const steps = useMemo<MagicMoveStep[]>(() => {
+    if (mode === "simple") {
+      // Convert simple steps to MagicMoveStep format
+      return simpleSteps.map((step) => ({
+        lang: selectedLang,
+        code: step.code,
+        meta: {
+          lines: simpleShowLineNumbers,
+          startLine: simpleStartLine,
+        },
+      }));
+    } else {
+      // Advanced mode: use parsed steps
+      return activeBlock?.steps ?? [];
+    }
+  }, [mode, simpleSteps, selectedLang, simpleShowLineNumbers, simpleStartLine, activeBlock]);
+
   const allErrors = useMemo(() => {
+    if (mode === "simple") {
+      // No parsing errors in simple mode
+      return [];
+    }
     return [...parsed.errors, ...(activeBlock?.errors ?? [])];
-  }, [parsed.errors, activeBlock]);
+  }, [mode, parsed.errors, activeBlock]);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [stepLayouts, setStepLayouts] = useState<StepLayout[] | null>(null);
@@ -378,6 +463,22 @@ WHERE t.name = 'postgres';
 
   const canExport = !!canvasRef.current && !!stepLayouts && stepLayouts.length > 0 && allErrors.length === 0;
 
+  // Simple mode handlers
+  const addSimpleStep = () => {
+    setSimpleSteps([...simpleSteps, { code: `// Step ${simpleSteps.length + 1}` }]);
+  };
+
+  const removeSimpleStep = (index: number) => {
+    if (simpleSteps.length <= 1) return; // Keep at least one step
+    setSimpleSteps(simpleSteps.filter((_, i) => i !== index));
+  };
+
+  const updateSimpleStep = (index: number, code: string) => {
+    const updated = [...simpleSteps];
+    updated[index] = { code };
+    setSimpleSteps(updated);
+  };
+
   const onExport = async () => {
     if (!canvasRef.current) return;
     if (!stepLayouts || stepLayouts.length === 0) return;
@@ -441,62 +542,207 @@ WHERE t.name = 'postgres';
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">Magic Move → Video (MVP)</h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Paste Slidev-style <code className="rounded bg-zinc-100 px-1 py-0.5 dark:bg-white/10">magic-move</code>{" "}
-            markdown and export a <code className="rounded bg-zinc-100 px-1 py-0.5 dark:bg-white/10">.webm</code>.
+            Create animated code transitions and export as{" "}
+            <code className="rounded bg-zinc-100 px-1 py-0.5 dark:bg-white/10">.webm</code> video.
           </p>
         </div>
 
+        {/* Mode Toggle */}
+        <div className="flex items-center gap-4 rounded-xl border border-black/10 bg-white p-3 dark:border-white/10 dark:bg-white/5">
+          <span className="text-sm font-medium">Mode:</span>
+          <div className="flex gap-2">
+            <button
+              className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${mode === "simple"
+                  ? "bg-zinc-900 text-white dark:bg-white dark:text-black"
+                  : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/20"
+                }`}
+              onClick={() => setMode("simple")}
+            >
+              Simple Mode
+            </button>
+            <button
+              className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${mode === "advanced"
+                  ? "bg-zinc-900 text-white dark:bg-white dark:text-black"
+                  : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/20"
+                }`}
+              onClick={() => setMode("advanced")}
+            >
+              Advanced Mode
+            </button>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Left Column - Input Area */}
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-medium">Input</div>
-              <button
-                className="rounded-md border border-black/10 bg-white px-3 py-1.5 text-xs font-medium hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
-                onClick={() => setInput(defaultInput)}
-              >
-                Reset example
-              </button>
-            </div>
-            <textarea
-              className="min-h-[420px] w-full resize-y rounded-xl border border-black/10 bg-white p-4 font-mono text-xs leading-5 text-zinc-900 outline-none ring-0 focus:border-black/20 dark:border-white/10 dark:bg-white/5 dark:text-zinc-50"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              spellCheck={false}
-            />
+            {mode === "simple" ? (
+              // Simple Mode UI
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-medium">Code Steps</div>
+                  <button
+                    className="rounded-md border border-black/10 bg-white px-3 py-1.5 text-xs font-medium hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+                    onClick={addSimpleStep}
+                  >
+                    + Add Step
+                  </button>
+                </div>
 
-            {(allErrors.length > 0 || layoutError) && (
-              <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-200">
-                {layoutError ? <div>{layoutError}</div> : null}
-                {allErrors.map((err: string) => (
-                  <div key={err}>{err}</div>
-                ))}
-              </div>
-            )}
+                {/* Language Selector */}
+                <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+                  Language
+                  <select
+                    className="rounded-md border border-black/10 bg-white px-2 py-2 text-sm text-zinc-900 dark:border-white/10 dark:bg-white/5 dark:text-zinc-50"
+                    value={selectedLang}
+                    onChange={(e) => setSelectedLang(e.target.value)}
+                  >
+                    {AVAILABLE_LANGUAGES.map((lang) => (
+                      <option key={lang} value={lang}>
+                        {lang.charAt(0).toUpperCase() + lang.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-            <details className="rounded-xl border border-black/10 bg-white p-4 text-sm text-zinc-700 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300">
-              <summary className="cursor-pointer select-none font-medium text-zinc-900 dark:text-zinc-50">
-                How to format input
-              </summary>
-              <div className="mt-3 space-y-2">
-                <div>
-                  Use an <span className="font-semibold">outer fence of 4 backticks</span> with either:
-                  <div className="mt-1 font-mono text-xs opacity-90">
-                    <span>````md magic-move</span> <span className="opacity-70">or</span>{" "}
-                    <span>````shiki-magic-move {"{lines:true}"}</span>
+                {/* Line Number Controls */}
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="flex items-center gap-2 rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-white/10 dark:bg-white/5 dark:text-zinc-50">
+                    <input
+                      type="checkbox"
+                      checked={simpleShowLineNumbers}
+                      onChange={(e) => setSimpleShowLineNumbers(e.target.checked)}
+                    />
+                    Show line numbers
+                  </label>
+
+                  <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+                    Start Line
+                    <input
+                      className="rounded-md border border-black/10 bg-white px-2 py-2 text-sm text-zinc-900 dark:border-white/10 dark:bg-white/5 dark:text-zinc-50"
+                      type="number"
+                      min={1}
+                      value={simpleStartLine}
+                      onChange={(e) => setSimpleStartLine(Math.max(1, Number(e.target.value) || 1))}
+                      disabled={!simpleShowLineNumbers}
+                    />
+                  </label>
+                </div>
+
+                {/* Step Textareas */}
+                <div className="flex flex-col gap-3 max-h-[500px] overflow-y-auto pr-2">
+                  {simpleSteps.map((step, index) => (
+                    <div key={index} className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                          Step {index + 1}
+                        </label>
+                        {simpleSteps.length > 1 && (
+                          <button
+                            className="rounded-md border border-red-500/20 bg-red-500/10 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-500/20 dark:text-red-400"
+                            onClick={() => removeSimpleStep(index)}
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      <textarea
+                        className="min-h-[120px] w-full resize-y rounded-xl border border-black/10 bg-white p-3 font-mono text-xs leading-5 text-zinc-900 outline-none ring-0 focus:border-black/20 dark:border-white/10 dark:bg-white/5 dark:text-zinc-50"
+                        value={step.code}
+                        onChange={(e) => updateSimpleStep(index, e.target.value)}
+                        spellCheck={false}
+                        placeholder={`Enter code for step ${index + 1}...`}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Simple Mode Error Display */}
+                {layoutError && (
+                  <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-200">
+                    <div>{layoutError}</div>
                   </div>
+                )}
+
+                {/* Simple Mode Help */}
+                <details className="rounded-xl border border-black/10 bg-white p-4 text-sm text-zinc-700 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300">
+                  <summary className="cursor-pointer select-none font-medium text-zinc-900 dark:text-zinc-50">
+                    How to use Simple Mode
+                  </summary>
+                  <div className="mt-3 space-y-2">
+                    <div>
+                      1. Select your <span className="font-semibold">programming language</span> from the dropdown.
+                    </div>
+                    <div>
+                      2. Enter code for each step in the textareas. Each step represents one frame in the animation.
+                    </div>
+                    <div>
+                      3. Click <span className="font-semibold">+ Add Step</span> to add more steps, or{" "}
+                      <span className="font-semibold">Remove</span> to delete a step.
+                    </div>
+                    <div>
+                      4. Toggle <span className="font-semibold">Show line numbers</span> to display line numbers in the preview.
+                    </div>
+                    <div>
+                      5. Click <span className="font-semibold">Play</span> to preview the animation, then{" "}
+                      <span className="font-semibold">Export WebM</span> to download.
+                    </div>
+                  </div>
+                </details>
+              </>
+            ) : (
+              // Advanced Mode UI
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-medium">Input</div>
+                  <button
+                    className="rounded-md border border-black/10 bg-white px-3 py-1.5 text-xs font-medium hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+                    onClick={() => setInput(defaultInput)}
+                  >
+                    Reset example
+                  </button>
                 </div>
-                <div>
-                  Inside, add multiple <span className="font-semibold">triple-backtick</span> code blocks (each is a step).
-                </div>
-                <div>
-                  Line numbers:
-                  <span className="ml-1 font-mono text-xs opacity-90">```ts {"{lines:true,startLine:5}"}</span>
-                  <span className="ml-2 opacity-80">
-                    (or put {"{lines:true}"} on the outer wrapper to apply to all steps)
-                  </span>
-                </div>
-              </div>
-            </details>
+                <textarea
+                  className="min-h-[420px] w-full resize-y rounded-xl border border-black/10 bg-white p-4 font-mono text-xs leading-5 text-zinc-900 outline-none ring-0 focus:border-black/20 dark:border-white/10 dark:bg-white/5 dark:text-zinc-50"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  spellCheck={false}
+                />
+
+                {(allErrors.length > 0 || layoutError) && (
+                  <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-200">
+                    {layoutError ? <div>{layoutError}</div> : null}
+                    {allErrors.map((err: string) => (
+                      <div key={err}>{err}</div>
+                    ))}
+                  </div>
+                )}
+
+                <details className="rounded-xl border border-black/10 bg-white p-4 text-sm text-zinc-700 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300">
+                  <summary className="cursor-pointer select-none font-medium text-zinc-900 dark:text-zinc-50">
+                    How to format input
+                  </summary>
+                  <div className="mt-3 space-y-2">
+                    <div>
+                      Use an <span className="font-semibold">outer fence of 4 backticks</span> with either:
+                      <div className="mt-1 font-mono text-xs opacity-90">
+                        <span>````md magic-move</span> <span className="opacity-70">or</span>{" "}
+                        <span>````shiki-magic-move {"{lines:true}"}</span>
+                      </div>
+                    </div>
+                    <div>
+                      Inside, add multiple <span className="font-semibold">triple-backtick</span> code blocks (each is a step).
+                    </div>
+                    <div>
+                      Line numbers:
+                      <span className="ml-1 font-mono text-xs opacity-90">```ts {"{lines:true,startLine:5}"}</span>
+                      <span className="ml-2 opacity-80">
+                        (or put {"{lines:true}"} on the outer wrapper to apply to all steps)
+                      </span>
+                    </div>
+                  </div>
+                </details>
+              </>
+            )}
           </div>
 
           <div className="flex flex-col gap-3">
@@ -523,7 +769,7 @@ WHERE t.name = 'postgres';
               </div>
             </div>
 
-            {parsed.blocks.length > 1 && (
+            {mode === "advanced" && parsed.blocks.length > 1 && (
               <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
                 Sequence
                 <select
@@ -595,14 +841,16 @@ WHERE t.name = 'postgres';
                 />
               </label>
 
-              <label className="flex items-center gap-2 rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-white/10 dark:bg-white/5 dark:text-zinc-50">
-                <input
-                  type="checkbox"
-                  checked={forceLineNumbers}
-                  onChange={(e) => setForceLineNumbers(e.target.checked)}
-                />
-                Force line numbers
-              </label>
+              {mode === "advanced" && (
+                <label className="flex items-center gap-2 rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-white/10 dark:bg-white/5 dark:text-zinc-50">
+                  <input
+                    type="checkbox"
+                    checked={forceLineNumbers}
+                    onChange={(e) => setForceLineNumbers(e.target.checked)}
+                  />
+                  Force line numbers
+                </label>
+              )}
             </div>
 
             <div className="flex flex-col gap-2">

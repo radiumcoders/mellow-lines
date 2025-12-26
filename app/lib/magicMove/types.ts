@@ -23,4 +23,10 @@ export type MagicMoveParseResult = {
   errors: string[]
 }
 
+/** Simple mode types */
+export type SimpleStep = {
+  code: string
+}
+
+export type UIMode = "simple" | "advanced"
 
