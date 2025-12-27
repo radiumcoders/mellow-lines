@@ -31,6 +31,8 @@ function clearAndPaintBackground(opts: {
   ctx.fillRect(0, 0, w, h)
 }
 
+//Draws a code frame to the canvas.
+//Paints the background, card background, gutter, and tokens.
 export function drawCodeFrame(opts: {
   ctx: CanvasRenderingContext2D
   config: CanvasLayoutConfig

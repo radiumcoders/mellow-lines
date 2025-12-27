@@ -1,0 +1,12 @@
+export function Header() {
+  return (
+    <header className="flex-none h-14 border-b flex items-center justify-between px-4 bg-background z-20">
+      <div className="flex items-center gap-2">
+        <h1 className="text-lg font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+          Code Animation Studio
+        </h1>
+      </div>
+    </header>
+  );
+}
+

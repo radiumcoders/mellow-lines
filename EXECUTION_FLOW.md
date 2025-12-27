@@ -2,7 +2,14 @@
 
 This document details the exact sequence of file/function calls that happen during the app's lifecycle.
 
-## Overview
+## Architecture Overview
+
+The app uses a component-based architecture:
+- **Main page** (`app/page.tsx`): Contains all business logic, state management, and rendering orchestration
+- **UI components** (`components/`): Presentational components that receive props and emit callbacks
+- **Core libraries** (`app/lib/magicMove/`, `app/lib/video/`): Rendering, animation, and export logic
+
+## Data Flow
 
 The app transforms user input (code steps) into an animated video through several phases:
 1. State initialization
@@ -16,12 +23,45 @@ The app transforms user input (code steps) into an animated video through severa
 
 ---
 
+## Component Structure
+
+### UI Components (`components/`)
+
+The UI is decomposed into presentational components that receive props and call callbacks:
+
+- **`header.tsx`**: Application header with title
+- **`steps-editor.tsx`**: Left panel container for step editing
+  - **`steps-editor-header.tsx`**: Toolbar with language/theme selectors and settings button
+    - **`settings-popover.tsx`**: Settings popover content (line numbers, start line, FPS slider)
+  - **`step-editor-item.tsx`**: Individual step editor with textarea and remove button
+- **`preview-panel.tsx`**: Right panel container for preview and controls
+  - **`canvas-preview.tsx`**: Canvas display with error handling overlay
+  - **`player-controls.tsx`**: Playback controls (play/pause, progress bar, seek, reset)
+  - **`export-controls.tsx`**: Export controls (timeline info, transition slider, export/download buttons)
+
+**Component Communication Pattern**:
+- Components receive state as props
+- Components call callback functions (e.g., `onAddStep`, `onPlayPause`, `onExport`) to trigger actions
+- All business logic remains in `app/page.tsx`
+
+### Core Logic (`app/page.tsx`)
+
+The main page component manages:
+- **State management**: All React state (steps, playback, export, UI state)
+- **Layout computation**: Tokenization and positioning via `useEffect` hooks
+- **Frame rendering**: `renderAt()` function that orchestrates canvas drawing
+- **Animation loop**: `requestAnimationFrame` loop for playback
+- **Export orchestration**: Video recording and blob creation
+- **Event handlers**: Functions passed as callbacks to components
+
+---
+
 ### 1. Initial Setup & State Initialization
 
 **File**: `app/page.tsx`
 
 When the component mounts:
-1. **State initialization** (lines 57-88):
+1. **State initialization**:
    - `simpleSteps`: initialized with `DEFAULT_STEPS` from `app/lib/constants.ts`
    - `selectedLang`: defaults to `"typescript"`
    - `simpleShowLineNumbers`: defaults to `true`
@@ -29,12 +69,19 @@ When the component mounts:
    - `theme`: defaults to `"vitesse-dark"`
    - `fps`, `transitionMs`: playback/export settings
    - `stepLayouts`, `isPlaying`, `playheadMs`, etc.: UI state
+   - `isExporting`, `exportProgress`, `downloadUrl`: export state
+
+2. **Component rendering**:
+   - `<Header />` renders the app title
+   - `<StepsEditor />` renders the left panel with step editing UI
+   - `<PreviewPanel />` renders the right panel with canvas and controls
+   - All components receive state and callbacks as props
 
 ---
 
 ### 2. Computing MagicMoveSteps (Data Transformation)
 
-**File**: `app/page.tsx` (lines 67-76)
+**File**: `app/page.tsx`
 
 **Trigger**: Whenever `simpleSteps`, `selectedLang`, `simpleShowLineNumbers`, or `simpleStartLine` changes
 
@@ -58,9 +105,9 @@ const steps = useMemo<MagicMoveStep[]>(() => {
 
 ### 3. Layout Computation (Tokenization & Positioning)
 
-**File**: `app/page.tsx` (lines 101-149)
+**File**: `app/page.tsx`
 
-**Trigger**: Whenever `steps` or `theme` changes
+**Trigger**: Whenever `steps` or `theme` changes (triggered by user interactions in `<StepsEditor />`)
 
 **Function**: `useEffect` hook (async operation)
 
@@ -200,7 +247,7 @@ const layout = layoutTokenLinesToCanvas({
 
 #### 3.5. Store layout result
 
-**File**: `app/page.tsx` (lines 131-136)
+**File**: `app/page.tsx`
 ```typescript
 nextLayouts.push({
   layout,
@@ -215,15 +262,20 @@ After all steps are processed:
 setStepLayouts(nextLayouts);
 ```
 
-**Responsibility**: Stores computed layouts in state, triggering re-render
+**Responsibility**: 
+- Stores computed layouts in state, triggering re-render
+- Updated `stepLayouts` state is passed to `<PreviewPanel />` as a prop
+- When `stepLayouts` changes, `<CanvasPreview />` receives the updated canvas ref and re-renders
 
 ---
 
 ### 4. Timeline Calculation
 
-**File**: `app/page.tsx` (lines 90-99)
+**File**: `app/page.tsx`
 
-**Trigger**: Whenever `steps.length` or `transitionMs` changes
+**Trigger**: 
+- Whenever `steps.length` changes (user adds/removes steps via `<StepsEditor />`)
+- Whenever `transitionMs` changes (user adjusts transition slider in `<ExportControls />`)
 
 **Function**: `useMemo` hook
 ```typescript
@@ -245,18 +297,21 @@ const timeline = useMemo(() => {
 
 ### 5. Rendering a Frame
 
-**File**: `app/page.tsx` (lines 151-257)
+**File**: `app/page.tsx`
 
 **Function**: `renderAt(ms: number)`
 
 **Trigger**: 
-- When `playheadMs` changes (lines 259-261)
-- During playback animation loop (lines 263-289)
-- During export (line 339, 362)
+- When `playheadMs` changes (via `useEffect` hook)
+  - User seeks via `<PlayerControls />` progress bar
+  - User clicks play/pause button in `<PlayerControls />`
+  - User clicks reset button in `<PlayerControls />`
+- During playback animation loop (`requestAnimationFrame` loop)
+- During export (render loop drives through timeline)
 
 **Step-by-step execution**:
 
-#### 5.1. Setup canvas dimensions (lines 159-174)
+#### 5.1. Setup canvas dimensions
 ```typescript
 canvas.width = cfg.canvasWidth;  // 1920
 const maxLineCount = Math.max(...stepLayouts.map(s => s.tokenLineCount));
@@ -276,7 +331,7 @@ cfg.canvasHeight = canvas.height;
 - Calculates height to fit all lines plus one blank line at bottom
 - Enforces minimum height of 1080px (Full HD)
 
-#### 5.2. Determine which step/transition to render (lines 176-243)
+#### 5.2. Determine which step/transition to render
 
 **Logic flow**:
 1. **Single step** (lines 179-190): Render the only step statically
@@ -293,7 +348,7 @@ cfg.canvasHeight = canvas.height;
 
 **Function**: `drawCodeFrame({ ctx, config, layout, theme, showLineNumbers, startLine, lineCount })`
 
-**Called from**: `app/page.tsx` (lines 181-189, 196-204, 231-239, 246-254)
+**Called from**: `app/page.tsx` `renderAt()` function for static frames
 
 **Internal execution** (in `canvasRenderer.ts`):
 
@@ -320,7 +375,7 @@ cfg.canvasHeight = canvas.height;
 
 #### 5.3b. Animated rendering (during transitions)
 
-**File**: `app/page.tsx` (lines 213-226)
+**File**: `app/page.tsx`
 ```typescript
 const progress = transitionMs <= 0 ? 1 : t / transitionMs;
 const animated = animateLayouts({ from: a.layout, to: b.layout, progress });
@@ -386,15 +441,17 @@ drawCodeFrame({
 
 ### 6. Playback Animation Loop
 
-**File**: `app/page.tsx` (lines 263-289)
+**File**: `app/page.tsx`
 
-**Trigger**: When `isPlaying` changes to `true`
+**Trigger**: 
+- When `isPlaying` changes to `true` (user clicks play button in `<PlayerControls />`)
+- When `isPlaying` changes to `false` (user clicks pause button in `<PlayerControls />`)
 
 **Function**: `useEffect` hook with `requestAnimationFrame` loop
 
 **Step-by-step execution**:
 
-1. **Line 271**: Define tick function
+1. **Define tick function**:
    ```typescript
    const tick = (now: number) => {
      const last = lastFrameRef.current ?? now;
@@ -408,12 +465,12 @@ drawCodeFrame({
    };
    ```
 
-2. **Line 282**: Start loop
+2. **Start loop**:
    ```typescript
    rafRef.current = requestAnimationFrame(tick);
    ```
 
-3. **Lines 259-261**: Render each frame
+3. **Render each frame**:
    ```typescript
    useEffect(() => {
      renderAt(playheadMs);
@@ -426,15 +483,17 @@ drawCodeFrame({
 
 ### 7. Export to Video
 
-**File**: `app/page.tsx` (lines 309-364)
+**File**: `app/page.tsx`
 
 **Function**: `onExport()` (async)
 
-**Trigger**: User clicks "Export" button
+**Trigger**: 
+- User clicks "Export" button in `<ExportControls />`
+- Button is disabled if `canExport` is false (no canvas ref or no step layouts)
 
 **Step-by-step execution**:
 
-#### 7.1. Setup (lines 313-330)
+#### 7.1. Setup
 ```typescript
 setIsExporting(true);
 setExportProgress(0);
@@ -454,7 +513,7 @@ canvas.width = cfg.canvasWidth;
 canvas.height = exportHeight;
 ```
 
-#### 7.2. Create render loop (lines 332-342)
+#### 7.2. Create render loop
 ```typescript
 const durationMs = timeline.totalMs;
 const start = performance.now();
@@ -477,7 +536,7 @@ requestAnimationFrame(renderLoop);
 
 **Function**: `recordCanvasToWebm({ canvas, fps, durationMs, onProgress })`
 
-**Called from**: `app/page.tsx` (lines 344-350)
+**Called from**: `app/page.tsx` `onExport()` function
 
 **Internal execution** (in `recordCanvas.ts`, lines 20-77):
 
@@ -542,7 +601,7 @@ requestAnimationFrame(renderLoop);
    return blob;
    ```
 
-#### 7.4. Cleanup and download (lines 351-363)
+#### 7.4. Cleanup and download
 ```typescript
 const blob = await recordCanvasToWebm(...);
 cancelled = true;  // Stop render loop
@@ -556,15 +615,20 @@ setPlayheadMs(0);
 renderAt(0);  // Reset to first frame
 ```
 
-**Responsibility**: Creates download URL and resets UI state
+**Responsibility**: 
+- Creates download URL and stores in `downloadUrl` state
+- Resets UI state (exporting flag, progress, playhead)
+- `downloadUrl` state change triggers re-render of `<ExportControls />`
 
 ---
 
 ### 8. User Downloads Video
 
-**File**: `app/page.tsx` (lines 618-624)
+**File**: `components/export-controls.tsx`
 
-When `downloadUrl` is set, a download button appears:
+**Trigger**: When `downloadUrl` state is set (from step 7.4)
+
+**Component rendering**:
 ```typescript
 {downloadUrl && (
   <Button variant="outline" size="sm" asChild className="gap-2">
@@ -576,5 +640,80 @@ When `downloadUrl` is set, a download button appears:
 )}
 ```
 
-**Responsibility**: Provides download link using the blob URL created in step 7.4
+**Responsibility**: 
+- `<ExportControls />` receives `downloadUrl` as prop
+- When `downloadUrl` is truthy, renders a download button
+- Provides download link using the blob URL created in step 7.4
+- User clicks button → browser downloads the WebM video file
+
+---
+
+## User Interaction Flow
+
+This section describes how user interactions flow through the component hierarchy:
+
+### Adding/Editing Steps
+
+1. **User types in `<StepEditorItem />` textarea**
+   - `onCodeChange` callback fires → `updateSimpleStep()` in `app/page.tsx`
+   - Updates `simpleSteps` state
+   - Triggers step 2 (MagicMoveStep computation)
+   - Triggers step 3 (layout computation)
+
+2. **User clicks "New Step" button in `<StepsEditorHeader />`**
+   - `onAddStep` callback fires → `addSimpleStep()` in `app/page.tsx`
+   - Adds new step to `simpleSteps` state
+   - Triggers re-render of `<StepsEditor />` with new step list
+
+3. **User clicks remove button in `<StepEditorItem />`**
+   - `onRemove` callback fires → `removeSimpleStep()` in `app/page.tsx`
+   - Removes step from `simpleSteps` state
+   - Prevents removal if only one step remains
+
+### Changing Settings
+
+1. **User changes language/theme in `<StepsEditorHeader />`**
+   - `onLangChange` / `onThemeChange` callbacks fire
+   - Updates `selectedLang` / `theme` state
+   - Triggers step 2 and step 3 (re-computation)
+
+2. **User toggles line numbers in `<SettingsPopover />`**
+   - `onShowLineNumbersChange` callback fires
+   - Updates `simpleShowLineNumbers` state
+   - Triggers step 2 and step 3 (re-computation)
+
+3. **User adjusts FPS in `<SettingsPopover />`**
+   - `onFpsChange` callback fires
+   - Updates `fps` state (used during export)
+
+### Playback Control
+
+1. **User clicks play/pause in `<PlayerControls />`**
+   - `onPlayPause` callback fires → `setIsPlaying(!isPlaying)`
+   - Triggers step 6 (animation loop starts/stops)
+
+2. **User seeks via progress bar in `<PlayerControls />`**
+   - `onSeek` callback fires → `setPlayheadMs(ms)`
+   - Triggers step 5 (frame rendering at new position)
+
+3. **User clicks reset in `<PlayerControls />`**
+   - `onReset` callback fires → stops playback and resets playhead
+   - Triggers step 5 (frame rendering at start)
+
+### Export
+
+1. **User adjusts transition duration in `<ExportControls />`**
+   - `onTransitionMsChange` callback fires → `setTransitionMs(ms)`
+   - Triggers step 4 (timeline recalculation)
+
+2. **User clicks export button in `<ExportControls />`**
+   - `onExport` callback fires → `onExport()` function in `app/page.tsx`
+   - Triggers step 7 (video export process)
+   - Updates `isExporting` and `exportProgress` state
+   - `<ExportControls />` shows progress and disables button during export
+
+3. **User clicks download button in `<ExportControls />`**
+   - Browser downloads the blob URL
+   - No callback needed (native browser behavior)
+
 

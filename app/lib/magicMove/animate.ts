@@ -28,6 +28,8 @@ function buildOccurrenceKey(tokens: LaidToken[]) {
   return keyed
 }
 
+//Animates the layout of the code from the from layout to the to layout.
+//Uses a cubic ease in out curve to interpolate the layout.
 export function animateLayouts(opts: {
   from: LayoutResult
   to: LayoutResult

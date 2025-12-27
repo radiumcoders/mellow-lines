@@ -1,0 +1,82 @@
+"use client";
+
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ResizablePanel } from "@/components/ui/resizable";
+import { StepsEditorHeader } from "./steps-editor-header";
+import { StepEditorItem } from "./step-editor-item";
+import type { SimpleStep } from "@/app/lib/magicMove/types";
+
+interface StepsEditorProps {
+  steps: SimpleStep[];
+  selectedLang: string;
+  onLangChange: (lang: string) => void;
+  theme: string;
+  onThemeChange: (theme: string) => void;
+  showLineNumbers: boolean;
+  onShowLineNumbersChange: (checked: boolean) => void;
+  startLine: number;
+  onStartLineChange: (value: number) => void;
+  fps: number;
+  onFpsChange: (value: number) => void;
+  onAddStep: () => void;
+  onRemoveStep: (index: number) => void;
+  onUpdateStep: (index: number, code: string) => void;
+}
+
+export function StepsEditor({
+  steps,
+  selectedLang,
+  onLangChange,
+  theme,
+  onThemeChange,
+  showLineNumbers,
+  onShowLineNumbersChange,
+  startLine,
+  onStartLineChange,
+  fps,
+  onFpsChange,
+  onAddStep,
+  onRemoveStep,
+  onUpdateStep,
+}: StepsEditorProps) {
+  return (
+    <ResizablePanel defaultSize={50} minSize={30} className="flex flex-col h-full bg-muted/10 overflow-hidden">
+      <StepsEditorHeader
+        stepCount={steps.length}
+        selectedLang={selectedLang}
+        onLangChange={onLangChange}
+        theme={theme as any}
+        onThemeChange={onThemeChange as any}
+        showLineNumbers={showLineNumbers}
+        onShowLineNumbersChange={onShowLineNumbersChange}
+        startLine={startLine}
+        onStartLineChange={onStartLineChange}
+        fps={fps}
+        onFpsChange={onFpsChange}
+        onAddStep={onAddStep}
+      />
+
+      <ScrollArea className="flex-1 w-full min-h-0">
+        <div className="p-4 space-y-6 max-w-4xl mx-auto pb-10">
+          {steps.map((step, index) => (
+            <StepEditorItem
+              key={index}
+              index={index}
+              code={step.code}
+              onCodeChange={(code) => onUpdateStep(index, code)}
+              onRemove={() => onRemoveStep(index)}
+              canRemove={steps.length > 1}
+            />
+          ))}
+
+          <Button variant="outline" className="w-full border-dashed text-muted-foreground" onClick={onAddStep}>
+            <Plus className="w-4 h-4 mr-2" /> Add another step
+          </Button>
+        </div>
+      </ScrollArea>
+    </ResizablePanel>
+  );
+}
+

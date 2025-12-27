@@ -75,6 +75,8 @@ function measureCharWidth(ctx: CanvasRenderingContext2D): number {
   return ctx.measureText("M").width
 }
 
+//Layouts the token lines to the canvas.
+//Paints the tokens to the canvas.
 export function layoutTokenLinesToCanvas(opts: {
   ctx: CanvasRenderingContext2D
   tokenLines: TokenLine[]

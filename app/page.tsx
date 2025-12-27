@@ -1,49 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import {
-  Play,
-  Pause,
-  RotateCcw,
-  Download,
-  Plus,
-  Trash2,
-  Settings2,
-  Layers,
-  Film,
-  X
-} from "lucide-react"
 
 import { animateLayouts } from "./lib/magicMove/animate"
 import { drawCodeFrame } from "./lib/magicMove/canvasRenderer"
 import { calculateCanvasHeight, layoutTokenLinesToCanvas, makeDefaultLayoutConfig } from "./lib/magicMove/codeLayout"
 import type { LayoutResult } from "./lib/magicMove/codeLayout"
-import { AVAILABLE_LANGUAGES, AVAILABLE_THEMES, getThemeVariant, shikiTokenizeToLines, type ShikiThemeChoice } from "./lib/magicMove/shikiHighlighter"
+import { getThemeVariant, shikiTokenizeToLines, type ShikiThemeChoice } from "./lib/magicMove/shikiHighlighter"
 import type { MagicMoveStep, SimpleStep } from "./lib/magicMove/types"
 import { recordCanvasToWebm } from "./lib/video/recordCanvas"
 import { DEFAULT_STEPS } from "./lib/constants"
 
-// Shadcn UI Imports
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
-import { Slider } from "@/components/ui/slider"
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
+import { ResizableHandle, ResizablePanelGroup } from "@/components/ui/resizable"
+import { Header } from "@/components/header"
+import { StepsEditor } from "@/components/steps-editor"
+import { PreviewPanel } from "@/components/preview-panel"
 
 type StepLayout = {
   layout: LayoutResult;
@@ -365,278 +336,51 @@ export default function Home() {
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
+      <Header />
 
-      {/* Header - Very Compact */}
-      <header className="flex-none h-14 border-b flex items-center justify-between px-4 bg-background z-20">
-        <div className="flex items-center gap-2">
-          <h1 className="text-lg font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            Code Animation Studio
-          </h1>
-        </div>
-      </header>
-
-      {/* Main Content Resizable Layout */}
       <ResizablePanelGroup direction="horizontal" className="flex-1 w-full max-w-full">
-
-        {/* Left Panel: Steps Editor (PRIORITY 1) */}
-        <ResizablePanel defaultSize={50} minSize={30} className="flex flex-col h-full bg-muted/10 overflow-hidden">
-          <div className="flex-none flex items-center justify-between px-4 py-2 border-b bg-background/50 backdrop-blur-sm sticky top-0 z-10 gap-2">
-            <div className="flex items-center gap-2">
-              <Layers className="w-4 h-4 text-muted-foreground" />
-              <span className="font-semibold text-sm">Steps</span>
-              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{simpleSteps.length}</span>
-            </div>
-
-            <div className="flex items-center gap-2 flex-1 justify-end">
-              <Select value={selectedLang} onValueChange={setSelectedLang}>
-                <SelectTrigger className="h-8 w-[140px] text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {AVAILABLE_LANGUAGES.map((lang) => (
-                    <SelectItem key={lang} value={lang}>
-                      {lang.charAt(0).toUpperCase() + lang.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={theme} onValueChange={(v) => setTheme(v as ShikiThemeChoice)}>
-                <SelectTrigger className="h-8 w-[140px] text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {AVAILABLE_THEMES.map((t) => (
-                    <SelectItem key={t} value={t} className="text-xs">
-                      {t === "github-light" ? "GitHub Light" :
-                        t === "github-dark" ? "GitHub Dark" :
-                          t === "nord" ? "Nord" :
-                            t === "one-dark-pro" ? "One Dark Pro" :
-                              t === "vitesse-dark" ? "Vitesse Dark" :
-                                t === "vitesse-light" ? "Vitesse Light" : t}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Separator orientation="vertical" className="h-6" />
-
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Settings2 className="w-4 h-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80 p-4">
-                  <div className="space-y-4">
-                    <h4 className="font-medium leading-none">Configuration</h4>
-                    <p className="text-sm text-muted-foreground">Adjust rendering settings.</p>
-
-                    <div className="grid gap-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="line-numbers">Line Numbers</Label>
-                        <Switch
-                          id="line-numbers"
-                          checked={simpleShowLineNumbers}
-                          onCheckedChange={setSimpleShowLineNumbers}
-                        />
-                      </div>
-                      {simpleShowLineNumbers && (
-                        <div className="flex items-center justify-between gap-4">
-                          <Label htmlFor="start-line" className="text-xs">Start Line</Label>
-                          <Input
-                            id="start-line"
-                            type="number"
-                            className="h-8 w-20 text-right"
-                            min={1}
-                            value={simpleStartLine}
-                            onChange={(e) => setSimpleStartLine(Math.max(1, Number(e.target.value) || 1))}
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    <Separator />
-
-                    <div className="space-y-3">
-                      <Label>FPS: {fps}</Label>
-                      <Slider
-                        value={[fps]}
-                        min={10}
-                        max={60}
-                        step={5}
-                        onValueChange={([v]) => setFps(v)}
-                      />
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              <Button onClick={addSimpleStep} size="sm" className="h-7 gap-1" variant="secondary">
-                <Plus className="w-3.5 h-3.5" /> New Step
-              </Button>
-            </div>
-          </div>
-
-          <ScrollArea className="flex-1 w-full min-h-0">
-            <div className="p-4 space-y-6 max-w-4xl mx-auto pb-10">
-              {simpleSteps.map((step, index) => (
-                <div key={index} className="group relative">
-                  {/* Step Header */}
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-xs font-mono text-muted-foreground">
-                      Step {index + 1}
-                    </Label>
-                    {simpleSteps.length > 1 && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                        onClick={() => removeSimpleStep(index)}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    )}
-                  </div>
-
-                  {/* Simplified Step Card/Textarea */}
-                  <div className="relative">
-                    <Textarea
-                      className="min-h-[250px] font-mono text-sm leading-relaxed p-4 resize-y bg-background focus-visible:ring-primary/20"
-                      value={step.code}
-                      onChange={(e) => updateSimpleStep(index, e.target.value)}
-                      spellCheck={false}
-                      placeholder={`// Enter code for step ${index + 1}...`}
-                    />
-                  </div>
-                </div>
-              ))}
-
-              <Button variant="outline" className="w-full border-dashed text-muted-foreground" onClick={addSimpleStep}>
-                <Plus className="w-4 h-4 mr-2" /> Add another step
-              </Button>
-            </div>
-          </ScrollArea>
-        </ResizablePanel>
+        <StepsEditor
+          steps={simpleSteps}
+          selectedLang={selectedLang}
+          onLangChange={setSelectedLang}
+          theme={theme}
+          onThemeChange={(v) => setTheme(v as ShikiThemeChoice)}
+          showLineNumbers={simpleShowLineNumbers}
+          onShowLineNumbersChange={setSimpleShowLineNumbers}
+          startLine={simpleStartLine}
+          onStartLineChange={setSimpleStartLine}
+          fps={fps}
+          onFpsChange={setFps}
+          onAddStep={addSimpleStep}
+          onRemoveStep={removeSimpleStep}
+          onUpdateStep={updateSimpleStep}
+        />
 
         <ResizableHandle withHandle />
 
-        {/* Right Panel: Preview & Player (PRIORITY 2/3) */}
-        <ResizablePanel defaultSize={50} minSize={30} className="flex flex-col bg-zinc-950/5 dark:bg-black">
-
-          {/* Top: Preview Canvas */}
-          <div className="flex-1 relative min-h-0 flex flex-col">
-            {layoutError && (
-              <div className="absolute top-4 left-4 right-4 z-50 bg-destructive/10 text-destructive border border-destructive/20 px-4 py-3 rounded-lg text-sm flex items-center justify-between">
-                <span>{layoutError}</span>
-                <Button variant="ghost" size="icon" className="h-4 w-4 hover:bg-destructive/20" onClick={() => setLayoutError(null)}>
-                  <X className="w-3 h-3" />
-                </Button>
-              </div>
-            )}
-
-            {/* Canvas Container */}
-            <div className="flex-1 overflow-auto flex items-center justify-center p-8 bg-[url('/grid-pattern.svg')] dark:bg-[url('/grid-pattern-dark.svg')] bg-center">
-              <div className="relative shadow-2xl rounded-lg overflow-hidden ring-1 ring-black/5 dark:ring-white/10 bg-zinc-950 max-w-full">
-                <canvas
-                  ref={canvasRef}
-                  className="block max-w-full h-auto"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Player Bar (Compact) */}
-          <div className="flex-none border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-3 flex items-center gap-4">
-            <Button
-              size="icon"
-              className="h-10 w-10 shrink-0 rounded-full"
-              onClick={() => setIsPlaying(!isPlaying)}
-              disabled={!stepLayouts}
-            >
-              {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
-            </Button>
-
-            <div className="flex-1 flex flex-col gap-1.5">
-              <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
-                <span className="font-mono">{Math.round(playheadMs)}ms</span>
-                <span className="font-mono">{Math.round(timeline.totalMs)}ms</span>
-              </div>
-              {/* Custom progress Slider concept */}
-              <div className="relative h-2 w-full bg-secondary rounded-full overflow-hidden cursor-pointer"
-                onClick={(e) => {
-                  if (!stepLayouts) return;
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const percent = (e.clientX - rect.left) / rect.width;
-                  setPlayheadMs(percent * timeline.totalMs);
-                }}
-              >
-                <div
-                  className="absolute inset-y-0 left-0 bg-primary transition-all duration-75 ease-linear"
-                  style={{ width: `${(playheadMs / Math.max(1, timeline.totalMs)) * 100}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 pl-2 border-l">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-muted-foreground"
-                onClick={() => {
-                  setIsPlaying(false);
-                  setPlayheadMs(0);
-                }}
-                title="Reset"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Bottom Actions (Download) */}
-          <div className="flex-none p-4 flex items-center justify-between gap-4 bg-muted/20 border-t">
-            <div className="flex items-center gap-4">
-              <div className="text-xs text-muted-foreground">
-                <span className="font-medium">{steps.length}</span> steps · <span className="font-medium">{(timeline.totalMs / 1000).toFixed(1)}s</span> duration
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Label className="text-xs whitespace-nowrap">Transition: {transitionMs}ms</Label>
-                <Slider
-                  value={[transitionMs]}
-                  min={100}
-                  max={5000}
-                  step={100}
-                  onValueChange={([v]) => setTransitionMs(v)}
-                  className="w-[200px]"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {downloadUrl && (
-                <Button variant="outline" size="sm" asChild className="gap-2">
-                  <a href={downloadUrl} download="magic-move.webm">
-                    <Film className="w-4 h-4" />
-                    Save Video
-                  </a>
-                </Button>
-              )}
-              <Button
-                size="sm"
-                className={cn("gap-2 min-w-[120px]", isExporting && "opacity-80")}
-                onClick={onExport}
-                disabled={!canExport || isExporting}
-              >
-                <Download className="w-4 h-4" />
-                {isExporting ? `Processing ${Math.round(exportProgress * 100)}%` : "Export"}
-              </Button>
-            </div>
-          </div>
-
-        </ResizablePanel>
-
+        <PreviewPanel
+          canvasRef={canvasRef}
+          layoutError={layoutError}
+          onDismissError={() => setLayoutError(null)}
+          isPlaying={isPlaying}
+          onPlayPause={() => setIsPlaying(!isPlaying)}
+          playheadMs={playheadMs}
+          totalMs={timeline.totalMs}
+          onSeek={setPlayheadMs}
+          onReset={() => {
+            setIsPlaying(false);
+            setPlayheadMs(0);
+          }}
+          stepLayouts={stepLayouts}
+          stepCount={steps.length}
+          transitionMs={transitionMs}
+          onTransitionMsChange={setTransitionMs}
+          downloadUrl={downloadUrl}
+          isExporting={isExporting}
+          exportProgress={exportProgress}
+          onExport={onExport}
+          canExport={canExport}
+        />
       </ResizablePanelGroup>
     </div>
   );
