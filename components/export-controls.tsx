@@ -1,9 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import { Download, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 interface ExportControlsProps {
@@ -13,8 +21,9 @@ interface ExportControlsProps {
   onTransitionMsChange: (value: number) => void;
   downloadUrl: string | null;
   isExporting: boolean;
+  exportPhase: "recording" | "saving" | null;
   exportProgress: number;
-  onExport: () => void;
+  onExport: (format: "webm" | "mp4") => void;
   canExport: boolean;
 }
 
@@ -25,10 +34,15 @@ export function ExportControls({
   onTransitionMsChange,
   downloadUrl,
   isExporting,
+  exportPhase,
   exportProgress,
   onExport,
   canExport,
 }: ExportControlsProps) {
+  const [format, setFormat] = useState<"webm" | "mp4">("webm");
+
+  const statusText = exportPhase === "saving" ? "Saving" : "Recording";
+
   return (
     <div className="flex-none p-4 flex items-center justify-between gap-4 bg-muted/20 border-t">
       <div className="flex items-center gap-4">
@@ -50,9 +64,19 @@ export function ExportControls({
       </div>
 
       <div className="flex items-center gap-3">
+        <Select value={format} onValueChange={(v) => setFormat(v as "webm" | "mp4")}>
+          <SelectTrigger className="w-[100px] h-8 text-xs">
+            <SelectValue placeholder="Format" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="webm">WebM</SelectItem>
+            <SelectItem value="mp4">MP4</SelectItem>
+          </SelectContent>
+        </Select>
+
         {downloadUrl && (
           <Button variant="outline" size="sm" asChild className="gap-2">
-            <a href={downloadUrl} download="magic-move.webm">
+            <a href={downloadUrl} download={`magic-move.${format}`}>
               <Film className="w-4 h-4" />
               Save Video
             </a>
@@ -61,11 +85,11 @@ export function ExportControls({
         <Button
           size="sm"
           className={cn("gap-2 min-w-[120px]", isExporting && "opacity-80")}
-          onClick={onExport}
+          onClick={() => onExport(format)}
           disabled={!canExport || isExporting}
         >
           <Download className="w-4 h-4" />
-          {isExporting ? `Processing ${Math.round(exportProgress * 100)}%` : "Export"}
+          {isExporting ? `${statusText} ${Math.round(exportProgress * 100)}%` : "Export"}
         </Button>
       </div>
     </div>

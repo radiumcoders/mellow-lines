@@ -47,6 +47,8 @@ export async function recordCanvasToWebm(opts: RecordCanvasOptions & { durationM
   const done = new Promise<Blob>((resolve, reject) => {
     recorder.onerror = () => reject(new Error("Recording failed"))
     recorder.onstop = () => {
+      // Stop all tracks to release resources and prevent memory leaks
+      stream.getTracks().forEach(track => track.stop());
       const blob = new Blob(chunks, { type: recorder.mimeType || "video/webm" })
       resolve(blob)
     }

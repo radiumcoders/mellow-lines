@@ -7,13 +7,14 @@ import { ResizablePanel } from "@/components/ui/resizable";
 import { StepsEditorHeader } from "./steps-editor-header";
 import { StepEditorItem } from "./step-editor-item";
 import type { SimpleStep } from "@/app/lib/magicMove/types";
+import type { ShikiThemeChoice } from "@/app/lib/magicMove/shikiHighlighter";
 
 interface StepsEditorProps {
   steps: SimpleStep[];
   selectedLang: string;
   onLangChange: (lang: string) => void;
-  theme: string;
-  onThemeChange: (theme: string) => void;
+  theme: ShikiThemeChoice;
+  onThemeChange: (theme: ShikiThemeChoice) => void;
   showLineNumbers: boolean;
   onShowLineNumbersChange: (checked: boolean) => void;
   startLine: number;
@@ -47,8 +48,8 @@ export function StepsEditor({
         stepCount={steps.length}
         selectedLang={selectedLang}
         onLangChange={onLangChange}
-        theme={theme as any}
-        onThemeChange={onThemeChange as any}
+        theme={theme}
+        onThemeChange={onThemeChange}
         showLineNumbers={showLineNumbers}
         onShowLineNumbersChange={onShowLineNumbersChange}
         startLine={startLine}

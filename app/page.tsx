@@ -9,6 +9,7 @@ import type { LayoutResult } from "./lib/magicMove/codeLayout"
 import { getThemeVariant, shikiTokenizeToLines, type ShikiThemeChoice } from "./lib/magicMove/shikiHighlighter"
 import type { MagicMoveStep, SimpleStep } from "./lib/magicMove/types"
 import { recordCanvasToWebm } from "./lib/video/recordCanvas"
+import { convertWebmToMp4, terminateFFmpeg } from "./lib/video/converter"
 import { DEFAULT_STEPS } from "./lib/constants"
 
 import { ResizableHandle, ResizablePanelGroup } from "@/components/ui/resizable"
@@ -31,7 +32,7 @@ export default function Home() {
   const [simpleStartLine, setSimpleStartLine] = useState<number>(1);
 
   const [theme, setTheme] = useState<ShikiThemeChoice>("vitesse-dark");
-  const [fps, setFps] = useState<number>(30);
+  const [fps, setFps] = useState<number>(60);
   const [transitionMs, setTransitionMs] = useState<number>(800);
 
   // Compute steps from simple mode
@@ -55,6 +56,7 @@ export default function Home() {
   const lastFrameRef = useRef<number | null>(null);
 
   const [isExporting, setIsExporting] = useState(false);
+  const [exportPhase, setExportPhase] = useState<"recording" | "saving" | null>(null);
   const [exportProgress, setExportProgress] = useState<number>(0);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
 
@@ -118,6 +120,14 @@ export default function Home() {
       cancelled = true;
     };
   }, [steps, theme]);
+
+  // Clear outdated download URL when settings change
+  useEffect(() => {
+    if (downloadUrl) {
+      URL.revokeObjectURL(downloadUrl);
+      setDownloadUrl(null);
+    }
+  }, [steps, theme, fps, transitionMs]); // Only those that affect the video content
 
   const renderAt = useCallback(
     (ms: number) => {
@@ -259,6 +269,16 @@ export default function Home() {
     };
   }, [isPlaying, timeline.totalMs]);
 
+  // Cleanup blob URLs on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (downloadUrl) {
+        URL.revokeObjectURL(downloadUrl);
+      }
+      terminateFFmpeg();
+    };
+  }, [downloadUrl]);
+
   const canExport = !!canvasRef.current && !!stepLayouts && stepLayouts.length > 0;
 
   // Simple mode handlers
@@ -277,11 +297,16 @@ export default function Home() {
     setSimpleSteps(updated);
   };
 
-  const onExport = async () => {
+
+
+  // ... existing imports
+
+  const onExport = async (format: "webm" | "mp4") => {
     if (!canvasRef.current) return;
     if (!stepLayouts || stepLayouts.length === 0) return;
 
     setIsExporting(true);
+    setExportPhase("recording");
     setExportProgress(0);
     if (downloadUrl) URL.revokeObjectURL(downloadUrl);
     setDownloadUrl(null);
@@ -313,21 +338,40 @@ export default function Home() {
     requestAnimationFrame(renderLoop);
 
     try {
-      const blob = await recordCanvasToWebm({
+      let blob: Blob | null = await recordCanvasToWebm({
         canvas,
         fps,
         durationMs,
-        onProgress: (elapsed, total) => setExportProgress(total <= 0 ? 0 : elapsed / total),
+        onProgress: (elapsed, total) => {
+          setExportProgress(total <= 0 ? 0 : elapsed / total);
+        },
       });
-      cancelled = true;
 
-      const url = URL.createObjectURL(blob);
-      setDownloadUrl(url);
+      if (format === "mp4") {
+        setExportPhase("saving");
+        setExportProgress(0);
+
+        const mp4Blob = await convertWebmToMp4(blob!, (val) => {
+          setExportProgress(val);
+        }, durationMs);
+        cancelled = true;
+
+        const url = URL.createObjectURL(mp4Blob);
+        setDownloadUrl(url);
+      } else {
+        cancelled = true;
+        const url = URL.createObjectURL(blob!);
+        setDownloadUrl(url);
+      }
+
+      blob = null; // Release WebM blob memory
+
     } catch (e) {
       cancelled = true;
       setLayoutError(e instanceof Error ? e.message : "Export failed");
     } finally {
       setIsExporting(false);
+      setExportPhase(null);
       setExportProgress(0);
       setPlayheadMs(0);
       renderAt(0);
@@ -377,6 +421,7 @@ export default function Home() {
           onTransitionMsChange={setTransitionMs}
           downloadUrl={downloadUrl}
           isExporting={isExporting}
+          exportPhase={exportPhase}
           exportProgress={exportProgress}
           onExport={onExport}
           canExport={canExport}

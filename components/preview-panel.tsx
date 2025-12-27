@@ -21,8 +21,9 @@ interface PreviewPanelProps {
   onTransitionMsChange: (value: number) => void;
   downloadUrl: string | null;
   isExporting: boolean;
+  exportPhase: "recording" | "saving" | null;
   exportProgress: number;
-  onExport: () => void;
+  onExport: (format: "webm" | "mp4") => void;
   canExport: boolean;
 }
 
@@ -42,6 +43,7 @@ export function PreviewPanel({
   onTransitionMsChange,
   downloadUrl,
   isExporting,
+  exportPhase,
   exportProgress,
   onExport,
   canExport,
@@ -71,6 +73,7 @@ export function PreviewPanel({
         onTransitionMsChange={onTransitionMsChange}
         downloadUrl={downloadUrl}
         isExporting={isExporting}
+        exportPhase={exportPhase}
         exportProgress={exportProgress}
         onExport={onExport}
         canExport={canExport}
