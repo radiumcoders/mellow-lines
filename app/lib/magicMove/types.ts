@@ -9,24 +9,7 @@ export type MagicMoveStep = {
   meta: MagicMoveStepMeta
 }
 
-export type MagicMoveBlock = {
-  /** Either Slidev-style `shiki-magic-move` or `md magic-move` */
-  kind: "md magic-move" | "shiki-magic-move"
-  outerMeta: MagicMoveStepMeta
-  steps: MagicMoveStep[]
-  errors: string[]
-}
-
-export type MagicMoveParseResult = {
-  blocks: MagicMoveBlock[]
-  /** Document-level errors (e.g., no blocks found) */
-  errors: string[]
-}
-
-/** Simple mode types */
 export type SimpleStep = {
   code: string
 }
-
-export type UIMode = "simple" | "advanced"
 

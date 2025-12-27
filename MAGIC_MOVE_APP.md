@@ -1,149 +1,212 @@
-# Magic Move → Video (MVP) — Usage & Internals (Developer Reference)
+# Code Animation Studio — Usage & Internals (Developer Reference)
 
-This app lets you paste **Slidev-style Shiki Magic Move** markdown and export an animated **WebM** video of code morphing between steps.
+This app lets you create animated **WebM** videos of code morphing between steps. Simply paste your code snippets for each step, configure the animation settings, and export a video.
 
-Reference feature: Slidev “Shiki Magic Move”.
+Inspired by Slidev's "Shiki Magic Move" feature.
 
 ## Dependencies & APIs (what they do, where we use them)
 
-- **Next.js (App Router)** (`next`)
-  - **What**: React framework for routing/build/dev server.
-  - **Where**: `app/layout.tsx`, `app/page.tsx`, `next.config.ts`, build pipeline.
-  - **Why**: simple deploy to Vercel later; zero backend required for this MVP.
-
-- **React** (`react`, `react-dom`)
-  - **What**: UI state + rendering.
-  - **Where**: `app/page.tsx` (hooks `useState`, `useMemo`, `useEffect`, `useCallback`, refs).
-  - **Why**: manage input, timeline playback, export progress, and block selection.
-
-- **Tailwind CSS** (`tailwindcss`, PostCSS)
-  - **What**: utility-first styling.
-  - **Where**: `app/globals.css`, Tailwind config (via PostCSS), classNames in `app/page.tsx`.
-
 - **Shiki** (`shiki`)
-  - **What**: syntax highlighting engine that tokenizes code with theme colors.
+  - **Responsible for**: **tokenizing code snippets** and providing the **syntax highlighting colors** for each token.
   - **Where**: `app/lib/magicMove/shikiHighlighter.ts`.
-  - **Why**: we render tokens ourselves onto canvas, so we need token-level colors.
 
 - **Canvas 2D API** (Web API)
-  - **What**: immediate-mode drawing API for `<canvas>`.
-  - **Where**: `app/lib/magicMove/canvasRenderer.ts`, `app/lib/magicMove/codeLayout.ts`, called from `app/page.tsx`.
-  - **Why**: deterministic frame rendering (easy to record to video).
+  - **Responsible for**: **rendering the code frames** and **actually animating the transitions** by drawing tokens at interpolated positions.
+  - **Where**: `app/lib/magicMove/canvasRenderer.ts`, `app/lib/magicMove/codeLayout.ts`.
 
 - **MediaStream / `HTMLCanvasElement.captureStream()`** (Web API)
-  - **What**: turns a canvas into a video stream at a given FPS.
+  - **Responsible for**: **capturing the live canvas output** at a given FPS to be processed.
   - **Where**: `app/lib/video/recordCanvas.ts`.
 
 - **MediaRecorder** (Web API)
-  - **What**: encodes a MediaStream into chunks (WebM VP9/VP8).
+  - **Responsible for**: **encoding the video stream** into chunks (WebM VP9/VP8).
   - **Where**: `app/lib/video/recordCanvas.ts`.
-  - **Quality knobs**: `mimeType` and `videoBitsPerSecond`.
 
 - **Blob + Object URLs** (Web API)
-  - **What**: stores the recorded video in-memory and lets the user download it.
-  - **Where**: `app/page.tsx` (creates `URL.createObjectURL(blob)` for the download link).
+  - **Responsible for**: **managing recorded video data** and generating the final **video download link**.
+  - **Where**: `app/page.tsx`.
 
 - **Bun** (`bun`)
-  - **What**: JS runtime + package manager used by this repo.
-  - **Where**: `package.json` scripts (`bun dev`, `bun run build`, etc).
+  - **Responsible for**: **development workflow**, dependency management, and running build scripts.
+  - **Where**: `package.json` scripts.
 
 ## What you can do
 
-- Paste one or more **magic-move blocks** into the textarea
-- Select which block to preview/export (when multiple exist)
-- Preview the animation (Play/Pause/Reset)
-- Export a **downloadable `.webm`** video
-- Use **line numbers** via `{lines:true}` and `{startLine:n}`
+- **Edit steps**: Add, remove, and edit code steps directly in textareas
+- **Configure settings**: 
+  - Choose programming language for syntax highlighting
+  - Select theme (color scheme)
+  - Toggle line numbers on/off
+  - Set starting line number
+  - Adjust transition duration (100-5000ms)
+  - Set FPS for export (10-60)
+- **Preview animation**: 
+  - Play/Pause controls to start/stop playback
+  - Scrub through timeline using the progress bar
+  - Reset button to jump back to the beginning
+  - See current time and total duration
+- **Export video**: Generate a downloadable `.webm` video file with progress tracking
 
-## Supported input formats
+## How to use
 
-### Option A: Slidev-style `shiki-magic-move` (recommended)
+### Creating steps
 
-Use **4 backticks** for the wrapper, and put multiple **triple-backtick** code fences inside.
+1. **Add steps**: Click "New Step" to add a new code step
+2. **Edit code**: Paste or type your code directly into each step's textarea
+3. **Remove steps**: Hover over a step and click the trash icon (minimum 1 step required)
+4. **Reorder**: Steps animate in order from top to bottom
 
-```md
-````shiki-magic-move {lines:true,startLine:5}
-```ts
-function add(a: number, b: number) {
-  return a + b
-}
-```
+### Configuration
 
-```ts
-function add(a: number, b: number) {
-  const sum = a + b
-  return sum
-}
-```
-````
-```
+All settings are available in the steps panel header:
 
-- **Outer meta** like `{lines:true,startLine:5}` applies to all steps by default.
-- Each inner code fence can override meta, e.g.:
-  - ````md
-  ```ts {lines:true,startLine:10}
-  // ...
-  ```
-  ````
+- **Language**: Select the programming language for syntax highlighting (applies to all steps)
+- **Theme**: Choose a color theme (e.g., Vitesse Dark, GitHub Light, Nord)
+- **Settings**: Open the settings popover to configure:
+  - **Line Numbers**: Toggle line numbers on/off (applies to all steps)
+  - **Start Line**: Set the starting line number (when line numbers are enabled)
+  - **FPS**: Set frames per second for video export (10-60)
 
-### Option B: Slidev docs `md magic-move`
+### Line numbers
 
-```md
-````md magic-move
-```js
-console.log(`Step ${1}`)
-```
-```js
-console.log(`Step ${1 + 1}`)
-```
-```ts
-console.log(`Step ${3}` as string)
-```
-````
-```
-
-### Multiple blocks in one input
-
-You can include multiple magic-move blocks (and any other markdown like slide separators `---`).
-The app will show a **Sequence** dropdown so you can choose which block to preview/export.
-
-## Line numbers (Slidev-like)
-
-To enable per-step line numbering:
-
-```md
-```ts {lines:true,startLine:5}
-// line 5
-// line 6
-```
-```
-
-Or enable for all steps in a block:
-
-```md
-````shiki-magic-move {lines:true,startLine:5}
-...
-````
-```
+- Enable/disable line numbers globally via the settings popover
+- When enabled, set the starting line number (default: 1)
+- All steps use the same line number settings
 
 ## Preview vs Export behavior (long code blocks)
 
 - **Preview**: The canvas grows vertically to fit the longest step in the selected block, and the preview container is scrollable.
 - **Export**: The canvas height is fixed at the start of recording (based on the longest step) so the video includes **all lines** with no clipping.
 
+## Video Player (Preview)
+
+The preview player allows you to scrub through the animation timeline and see how the code morphs between steps.
+
+### Timeline Structure
+
+The timeline is calculated based on:
+- **Start hold**: 250ms pause before the first transition
+- **Transitions**: User-configurable duration (default 800ms, range 100-5000ms) for morphing between steps
+- **Between holds**: 120ms pause after each transition before the next one
+- **End hold**: 250ms pause after the final step
+
+**Formula**: `totalMs = startHold + (transitions × transitionMs) + (transitions × betweenHold) + endHold`
+
+For a single step, the timeline is simply `startHold + endHold` (500ms total).
+
+### Playback Mechanism
+
+- **State**: Uses `playheadMs` to track current position (0 to `timeline.totalMs`)
+- **Animation loop**: When playing, uses `requestAnimationFrame` to update `playheadMs` based on elapsed time (`performance.now()` delta)
+- **Rendering**: Each frame calls `renderAt(playheadMs)` which:
+  1. Calculates which step/transition is active based on the timeline
+  2. For transitions, computes animation progress (0-1) and calls `animateLayouts()` to interpolate token positions
+  3. Draws the frame using `drawCodeFrame()` with either static or animated tokens
+- **Looping**: When `playheadMs` reaches `timeline.totalMs`, it resets to 0 (seamless loop)
+
+### Controls
+
+- **Play/Pause**: Toggles the `requestAnimationFrame` loop
+- **Progress bar**: Clickable scrubber that sets `playheadMs` directly (percentage × `timeline.totalMs`)
+- **Reset**: Stops playback and sets `playheadMs` to 0
+- **Time display**: Shows current position and total duration in milliseconds
+
+### Rendering Logic (`renderAt`)
+
+The `renderAt(ms)` function determines what to render at a given timestamp:
+
+1. **Single step**: Renders the only step statically
+2. **Start hold**: Renders the first step statically
+3. **Transition**: Calculates progress (0-1) and renders animated tokens using `animateLayouts()`
+4. **Between hold**: Renders the destination step statically
+5. **End hold**: Renders the final step statically
+
+The canvas height is dynamically calculated based on the maximum line count across all steps (minimum 1080px for Full HD).
+
+## Export (Video Recording)
+
+The export process records the animation as a WebM video file that can be downloaded.
+
+### Export Process
+
+1. **Canvas Setup**:
+   - Sets fixed canvas dimensions: width from `makeDefaultLayoutConfig()` (1920px), height calculated from max line count
+   - Ensures consistent frame size throughout recording
+
+2. **Render Loop**:
+   - Creates a render loop using `requestAnimationFrame` that drives through the entire timeline
+   - For each frame, calls `renderAt(elapsed)` where `elapsed` is calculated from `performance.now()` since export started
+   - Continues until `elapsed >= durationMs`
+
+3. **Stream Capture**:
+   - Uses `canvas.captureStream(fps)` to create a `MediaStream` from the canvas
+   - The stream captures frames at the configured FPS (default 30, range 10-60)
+
+4. **MediaRecorder**:
+   - Creates a `MediaRecorder` instance with the stream
+   - Codec selection (in order of preference):
+     - `video/webm;codecs=vp9` (10 Mbps bitrate) - best quality
+     - `video/webm;codecs=vp8` (8 Mbps bitrate) - good compatibility
+     - `video/webm` (default bitrate) - fallback
+   - Uses higher bitrates than browser defaults for better text clarity
+
+5. **Recording**:
+   - Starts recording with `recorder.start(250)` (chunk interval: 250ms)
+   - Tracks progress via `onProgress` callback (elapsed/total)
+   - Stops after `durationMs` with a small buffer to flush final chunks
+
+6. **Blob Creation**:
+   - Collects all data chunks from `ondataavailable` events
+   - Creates a `Blob` with the appropriate MIME type
+   - Generates a download URL via `URL.createObjectURL(blob)`
+
+7. **Cleanup**:
+   - Resets playhead to 0
+   - Renders frame at 0 to restore preview state
+   - Shows download button with the generated URL
+
+### Export Settings
+
+- **FPS**: Configurable (10-60), affects both playback smoothness and file size
+- **Transition duration**: Configurable (100-5000ms), affects total video length
+- **Canvas resolution**: Fixed width (1920px), dynamic height based on content
+- **Bitrate**: Automatically set based on codec (VP9: 10 Mbps, VP8: 8 Mbps)
+
+### Progress Tracking
+
+During export, the UI shows:
+- Progress percentage: `(elapsed / total) × 100`
+- Button text: "Processing X%" while exporting
+- Export button is disabled during recording
+
 ## How it works (runtime flow)
 
 ```mermaid
 flowchart TD
-UserInput[UserInput_Textarea] --> Parser[ParseMagicMove_BlocksAndSteps]
-Parser --> BlockSelect[SelectActiveBlock]
-BlockSelect --> Tokenize[Shiki_Tokenize]
+UserInput[UserInput_StepsArray] --> Steps[SimpleSteps_State]
+Steps --> Compute[Compute_MagicMoveSteps]
+Compute --> Tokenize[Shiki_Tokenize_EachStep]
 Tokenize --> Layout[Layout_TokenPositionsAndGutter]
 Layout --> Animate[Animate_MagicMove]
 Animate --> Canvas[Canvas_RenderFrames]
+Canvas --> Player[VideoPlayer_Preview]
 Canvas --> Recorder[MediaRecorder_WebM]
 Recorder --> Download[DownloadLink_BlobURL]
 ```
+
+## Step-by-step execution flow
+
+For a detailed breakdown of the exact sequence of file/function calls during the app's lifecycle, see **[EXECUTION_FLOW.md](./EXECUTION_FLOW.md)**.
+
+This document covers:
+- Initial setup and state initialization
+- Data transformation (SimpleStep → MagicMoveStep)
+- Tokenization and layout computation
+- Timeline calculation
+- Frame rendering (static and animated)
+- Playback animation loop
+- Video export process
+- Download workflow
 
 ## File-by-file reference (what each file does)
 
@@ -152,57 +215,41 @@ Recorder --> Download[DownloadLink_BlobURL]
 #### `app/page.tsx`
 - **Role**: The whole MVP UI and orchestrator.
 - **Owns state**:
-  - `input`: textarea markdown
-  - `blockIndex`: which magic-move block is active
-  - `theme`: `"dark" | "light"`
-  - `fps`, `transitionMs`
-  - `forceLineNumbers`
-  - `isPlaying`, `playheadMs`
-  - `isExporting`, `exportProgress`, `downloadUrl`
+  - `simpleSteps`: array of code steps (simple mode)
+  - `selectedLang`: language for syntax highlighting
+  - `simpleShowLineNumbers`, `simpleStartLine`: line number settings
+  - `theme`: Shiki theme choice
+  - `fps`, `transitionMs`: export/playback settings
+  - `stepLayouts`: computed layouts for each step
+  - `isPlaying`, `playheadMs`: playback state
+  - `isExporting`, `exportProgress`, `downloadUrl`: export state
 - **Key responsibilities**:
-  - **Parse** input using `parseMagicMove(input)` and derive `activeBlock`.
-  - **Tokenize & layout** each step via `shikiTokenizeToLines()` and `layoutTokenLinesToCanvas()`.
-  - **Compute canvas height** using `calculateCanvasHeight()` based on the max line count.
-  - **Render** frames via `drawCodeFrame()`; during transitions use `animateLayouts()`.
-  - **Playback**: update `playheadMs` on `requestAnimationFrame`.
-  - **Export**: set a fixed canvas size, drive rendering for the full timeline, and record via `recordCanvasToWebm()`.
+  - **Simple mode**: manages steps array, allows adding/removing/editing steps
+  - **Tokenize & layout**: computes `stepLayouts` via `shikiTokenizeToLines()` and `layoutTokenLinesToCanvas()` for each step
+  - **Timeline calculation**: computes total duration based on holds and transitions
+  - **Render function** (`renderAt`): determines which step/transition to render at a given timestamp
+  - **Video player**:
+    - Uses `requestAnimationFrame` loop when `isPlaying` is true
+    - Updates `playheadMs` based on elapsed time (delta from `performance.now()`)
+    - Loops back to 0 when reaching `timeline.totalMs`
+    - Progress bar allows scrubbing by setting `playheadMs` directly
+  - **Export**:
+    - Sets fixed canvas dimensions (width: 1920px, height: calculated from max lines)
+    - Creates render loop that drives through entire timeline
+    - Calls `recordCanvasToWebm()` to capture stream and encode to WebM
+    - Tracks progress and creates download URL when complete
 
-#### `app/layout.tsx`
-- **Role**: App Router root layout (HTML shell).
-- **Does**: loads global CSS and fonts (Next `next/font`), sets metadata.
-
-#### `app/globals.css`
-- **Role**: global styles (Tailwind base + any global tweaks).
-
-### Parsing (magic-move)
+### Types and data structures
 
 #### `app/lib/magicMove/types.ts`
-- **Role**: shared types used across parser/render/export.
+- **Role**: shared types used across render/export.
 - **Key types**:
-  - `MagicMoveStepMeta`: `{ lines: boolean; startLine: number }`
-  - `MagicMoveStep`: `{ lang; code; meta }`
-  - `MagicMoveBlock`: `{ kind; outerMeta; steps; errors }`
-  - `MagicMoveParseResult`: `{ blocks; errors }`
+  - `SimpleStep`: `{ code: string }` - user input format
+  - `MagicMoveStepMeta`: `{ lines: boolean; startLine: number }` - line number settings
+  - `MagicMoveStep`: `{ lang: string; code: string; meta: MagicMoveStepMeta }` - processed step format
+  - `StepLayout`: `{ layout: LayoutResult; tokenLineCount: number; startLine: number; showLineNumbers: boolean }` - computed layout for a step (defined in `app/page.tsx`)
 
-#### `app/lib/magicMove/parseLineMeta.ts`
-- **Role**: parse Slidev-like meta blocks such as `{lines:true,startLine:5}`.
-- **Functions**:
-  - `parseLineMetaDetailed(info)`: returns `{ meta, specified }` so we can tell whether a value was explicitly set.
-  - `parseLineMeta(info)`: returns only `meta` (convenience).
-- **Behavior**:
-  - Unknown keys are ignored.
-  - `lines:true|false` supported.
-  - `startLine:n` supported (must be `>= 1`).
-
-#### `app/lib/magicMove/parseMagicMove.ts`
-- **Role**: parse the input document into one or more magic-move blocks.
-- **What it recognizes**:
-  - Outer wrapper: ` ````shiki-magic-move ... ```` ` OR ` ````md magic-move ... ```` ` (4 backticks)
-  - Inner steps: triple-backtick code fences inside each wrapper.
-- **Important behavior**:
-  - Non-code content between inner fences is ignored (Slidev-like).
-  - Outer meta is used as defaults; inner meta overrides only when explicitly provided.
-  - Returns `blocks[]` so the UI can select which sequence to render/export.
+The app uses a simple mode where users directly input code steps, and these are converted to `MagicMoveStep[]` format via `useMemo` in `app/page.tsx`.
 
 ### Highlighting + layout + rendering
 
@@ -210,8 +257,12 @@ Recorder --> Download[DownloadLink_BlobURL]
 - **Role**: one-time Shiki initialization + per-step tokenization.
 - **Functions**:
   - `shikiTokenizeToLines({code, lang, theme})` → `{ lines, bg }`
-- **Themes**: `github-light`, `github-dark`.
-- **Languages loaded**: JS/TS/JSX/TSX/JSON/CSS/HTML/Markdown/Bash/Shell/SQL.
+- **Themes**: 
+  - `github-light`, `github-dark`
+  - `nord`
+  - `one-dark-pro`
+  - `vitesse-dark`, `vitesse-light`
+- **Languages loaded**: JavaScript, TypeScript, TSX, JSX, JSON, SQL, CSS, HTML, Markdown, Bash, Shell.
 - **Fallback**: if tokenization fails (unknown lang), it re-tokenizes as `text`.
 
 #### `app/lib/magicMove/codeLayout.ts`
@@ -249,36 +300,70 @@ Recorder --> Download[DownloadLink_BlobURL]
 - **Role**: record a canvas into a `.webm` Blob.
 - **Function**:
   - `recordCanvasToWebm({ canvas, fps, durationMs, onProgress })` → `Blob`
-- **Codec strategy**:
-  - Prefer `video/webm;codecs=vp9` then `vp8`, then generic `video/webm`.
+- **Process**:
+  1. Creates `MediaStream` via `canvas.captureStream(fps)`
+  2. Selects best supported codec using `pickMimeType()`:
+     - `video/webm;codecs=vp9` (10 Mbps) - preferred
+     - `video/webm;codecs=vp8` (8 Mbps) - fallback
+     - `video/webm` (default bitrate) - last resort
+  3. Creates `MediaRecorder` with selected codec and bitrate
+  4. Starts recording with 250ms chunk interval
+  5. Tracks progress via `onProgress` callback (called on each `requestAnimationFrame` tick)
+  6. Stops after `durationMs` with buffer for final chunk flush
+  7. Collects chunks and creates final `Blob`
 - **Quality strategy**:
-  - Sets `videoBitsPerSecond` (higher than browser defaults) for better text clarity.
+  - Uses higher bitrates than browser defaults (10 Mbps for VP9, 8 Mbps for VP8) for better text clarity
+  - Codec selection ensures best quality available on the user's browser
 
-## Where “the options” live
+## Where "the options" live
 
 - **Video / playback knobs**: `app/page.tsx`
-  - `fps`, `transitionMs`, theme selection, force line numbers, export button.
-- **Canvas resolution**: `app/lib/magicMove/codeLayout.ts` (`makeDefaultLayoutConfig()` baseline width)
-- **Dynamic height**: `app/lib/magicMove/codeLayout.ts` (`calculateCanvasHeight()`)
+  - `fps`: 10-60 FPS (affects playback smoothness and file size)
+  - `transitionMs`: 100-5000ms transition duration (affects total video length)
+  - Theme selection: Shiki theme picker (affects colors)
+  - Line numbers: toggle and start line number (affects layout)
+  - Export button: triggers video recording
+- **Timeline timing**: `app/page.tsx` (`timeline` calculation)
+  - Start hold: 250ms (fixed)
+  - Between hold: 120ms (fixed)
+  - End hold: 250ms (fixed)
+  - Transition: user-configurable via `transitionMs`
+- **Canvas resolution**: `app/lib/magicMove/codeLayout.ts` (`makeDefaultLayoutConfig()` baseline width: 1920px)
+- **Dynamic height**: `app/lib/magicMove/codeLayout.ts` (`calculateCanvasHeight()` - minimum 1080px)
 - **Bitrate / codec**: `app/lib/video/recordCanvas.ts`
+  - VP9: 10 Mbps
+  - VP8: 8 Mbps
+  - Fallback: browser default
 - **Supported languages**: `app/lib/magicMove/shikiHighlighter.ts`
 
 ## Notes / limitations (current MVP)
 
 - Export format is **WebM** (MP4 would require ffmpeg, typically server-side).
-- “Magic move” matching is a pragmatic heuristic (good for many refactors, not perfect for all diffs).
-- Line highlighting markers like `{*|*}` are currently ignored for rendering (safe to keep in input).
+- "Magic move" matching is a pragmatic heuristic (good for many refactors, not perfect for all diffs).
+- All steps use the same language and line number settings (no per-step configuration).
+- Canvas height is dynamic based on the longest step (minimum 1080px for Full HD).
+- Maximum recommended steps: performance may degrade with very long sequences (50+ steps).
 
 ## Troubleshooting
 
-- **No blocks found**
-  - Ensure you used **4 backticks** on the wrapper and **3 backticks** for each step.
-  - Use one of:
-    - ` ````shiki-magic-move ... ```` `
-    - ` ````md magic-move ... ```` `
+- **Animation not showing**
+  - Ensure you have at least one step with code
+  - Check that the language selection matches your code (for proper syntax highlighting)
+  - Verify the canvas is rendering (check browser console for errors)
 
 - **Video looks blurry**
   - The app records at **1920×(dynamic height)** and uses a higher bitrate, but quality still depends on browser codec support.
   - VP9 usually yields best quality; the recorder falls back to VP8 if needed.
+  - Try increasing the FPS setting (higher FPS = smoother but larger file)
+
+- **Export fails or hangs**
+  - Ensure you have at least one step
+  - Check browser console for errors
+  - Try reducing the number of steps or transition duration
+  - Some browsers may have limitations on MediaRecorder; try a different browser
+
+- **Line numbers not showing**
+  - Enable line numbers in the settings popover
+  - Ensure the starting line number is set to 1 or higher
 
 
