@@ -65,7 +65,7 @@ export function CodeEditor({
             <pre
                 ref={preRef}
                 aria-hidden="true"
-                className="absolute inset-0 p-4 m-0 pointer-events-none overflow-hidden whitespace-pre-wrap break-words border-none font-mono text-sm leading-relaxed"
+                className="absolute inset-0 p-4 m-0 pointer-events-none overflow-auto whitespace-pre-wrap break-words border-none font-mono text-sm leading-relaxed"
                 style={{ backgroundColor: bg }}
             >
                 {lines ? (
