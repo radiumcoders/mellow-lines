@@ -1,7 +1,6 @@
 import Image from "next/image";
 
 export async function Header() {
-  'use cache'
 
   return (
     <header className="flex-none h-14 border-b flex items-center justify-between px-4 bg-background z-20">
