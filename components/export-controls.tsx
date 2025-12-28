@@ -44,7 +44,7 @@ export function ExportControls({
   const statusText = exportPhase === "saving" ? "Saving" : "Recording";
 
   return (
-    <div className="flex-none p-4 flex items-center justify-between gap-4 bg-muted/20 border-t">
+    <div className="flex-none p-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 bg-muted/20 border-t">
       <div className="flex items-center gap-4">
         <div className="text-xs text-muted-foreground">
           <span className="font-medium">{stepCount}</span> steps · <span className="font-medium">{(totalMs / 1000).toFixed(1)}s</span> duration

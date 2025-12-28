@@ -49,7 +49,7 @@ export function PreviewPanel({
   canExport,
 }: PreviewPanelProps) {
   return (
-    <ResizablePanel defaultSize={50} minSize={30} className="flex flex-col bg-zinc-950/5 dark:bg-black">
+    <ResizablePanel defaultSize={50} minSize={30} className="flex flex-col h-full bg-zinc-950/5 dark:bg-black">
       <CanvasPreview
         canvasRef={canvasRef}
         layoutError={layoutError}

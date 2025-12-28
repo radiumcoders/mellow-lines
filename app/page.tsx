@@ -378,7 +378,7 @@ export default function Home() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
+    <div className="h-full flex flex-col bg-background text-foreground overflow-hidden">
       <ResizablePanelGroup direction="horizontal" className="flex-1 w-full max-w-full">
         <StepsEditor
           steps={simpleSteps}
