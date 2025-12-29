@@ -8,7 +8,7 @@ import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Field, FieldLabel } from "@/components/ui/field";
+import { Field, FieldLabel, FieldGroup } from "@/components/ui/field";
 import { MinusIcon, PlusIcon } from "lucide-react";
 
 interface SettingsPopoverProps {
@@ -109,52 +109,59 @@ export function SettingsPopover({
 
       <Separator />
 
-      <div className="space-y-4 pt-1">
-        <div className="space-y-3">
+      <FieldGroup className="pt-1">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Timing (ms)
+        </Label>
+
+        <Field>
           <div className="flex justify-between items-center">
-            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Timing (ms)</Label>
+            <FieldLabel className="text-xs">Start Rest</FieldLabel>
+            <FieldLabel className="text-xs text-muted-foreground font-mono">
+              {startHoldMs}ms
+            </FieldLabel>
           </div>
+          <Slider
+            value={[startHoldMs]}
+            min={0}
+            max={2000}
+            step={50}
+            onValueChange={([v]) => onStartHoldMsChange(v)}
+          />
+        </Field>
 
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <Label className="text-xs">Start Rest: {startHoldMs}ms</Label>
-            </div>
-            <Slider
-              value={[startHoldMs]}
-              min={0}
-              max={2000}
-              step={50}
-              onValueChange={([v]) => onStartHoldMsChange(v)}
-            />
+        <Field>
+          <div className="flex justify-between items-center">
+            <FieldLabel className="text-xs">Between Rest</FieldLabel>
+            <FieldLabel className="text-xs text-muted-foreground font-mono">
+              {betweenHoldMs}ms
+            </FieldLabel>
           </div>
+          <Slider
+            value={[betweenHoldMs]}
+            min={0}
+            max={2000}
+            step={50}
+            onValueChange={([v]) => onBetweenHoldMsChange(v)}
+          />
+        </Field>
 
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <Label className="text-xs">Between Rest: {betweenHoldMs}ms</Label>
-            </div>
-            <Slider
-              value={[betweenHoldMs]}
-              min={0}
-              max={2000}
-              step={50}
-              onValueChange={([v]) => onBetweenHoldMsChange(v)}
-            />
+        <Field>
+          <div className="flex justify-between items-center">
+            <FieldLabel className="text-xs">End Rest</FieldLabel>
+            <FieldLabel className="text-xs text-muted-foreground font-mono">
+              {endHoldMs}ms
+            </FieldLabel>
           </div>
-
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <Label className="text-xs">End Rest: {endHoldMs}ms</Label>
-            </div>
-            <Slider
-              value={[endHoldMs]}
-              min={0}
-              max={2000}
-              step={50}
-              onValueChange={([v]) => onEndHoldMsChange(v)}
-            />
-          </div>
-        </div>
-      </div>
+          <Slider
+            value={[endHoldMs]}
+            min={0}
+            max={2000}
+            step={50}
+            onValueChange={([v]) => onEndHoldMsChange(v)}
+          />
+        </Field>
+      </FieldGroup>
     </div>
   );
 }
