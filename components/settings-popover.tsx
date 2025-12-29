@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { MinusIcon, PlusIcon } from "lucide-react";
 
@@ -92,16 +93,19 @@ export function SettingsPopover({
 
       <Separator />
 
-      <div className="space-y-3">
-        <Label>FPS: {fps}</Label>
-        <Slider
-          value={[fps]}
-          min={10}
-          max={60}
-          step={5}
-          onValueChange={([v]) => onFpsChange(v)}
-        />
-      </div>
+      <Field orientation="horizontal">
+        <FieldLabel>FPS</FieldLabel>
+        <Tabs
+          value={fps.toString()}
+          onValueChange={(v) => onFpsChange(Number(v))}
+          className="w-fit"
+        >
+          <TabsList>
+            <TabsTrigger value="30">30</TabsTrigger>
+            <TabsTrigger value="60">60</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </Field>
 
       <Separator />
 
