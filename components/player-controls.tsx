@@ -2,6 +2,8 @@
 
 import { Play, Pause, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { Separator } from "@/components/ui/separator";
 
 interface PlayerControlsProps {
   isPlaying: boolean;
@@ -38,27 +40,19 @@ export function PlayerControls({
           <span className="font-mono">{Math.round(playheadMs)}ms</span>
           <span className="font-mono">{Math.round(totalMs)}ms</span>
         </div>
-        {/* Custom progress Slider concept */}
-        <div
-          className="relative h-2 w-full bg-secondary rounded-full overflow-hidden cursor-pointer"
-          onClick={(e) => {
-            if (disabled) return;
-            const rect = e.currentTarget.getBoundingClientRect();
-            const percent = (e.clientX - rect.left) / rect.width;
-            onSeek(percent * totalMs);
-          }}
-        >
-          <div
-            className="absolute inset-y-0 left-0 bg-primary"
-            style={{
-              width: `${(playheadMs / Math.max(1, totalMs)) * 100}%`,
-              willChange: "width"
-            }}
-          />
-        </div>
+        <Slider
+          value={[playheadMs]}
+          max={Math.max(1, totalMs)}
+          step={1}
+          onValueChange={([value]) => onSeek(value)}
+          disabled={disabled}
+          className="py-1"
+          noThumb
+        />
       </div>
 
-      <div className="flex items-center gap-2 pl-2 border-l">
+      <div className="flex items-center gap-2 pl-1">
+        <Separator orientation="vertical" className="h-8" />
         <Button
           variant="ghost"
           size="icon"
