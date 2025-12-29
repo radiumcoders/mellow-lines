@@ -5,6 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { MinusIcon, PlusIcon } from "lucide-react";
 
 interface SettingsPopoverProps {
   showLineNumbers: boolean;
@@ -50,17 +54,39 @@ export function SettingsPopover({
           />
         </div>
         {showLineNumbers && (
-          <div className="flex items-center justify-between gap-4">
-            <Label htmlFor="start-line" className="text-xs">Start Line</Label>
-            <Input
-              id="start-line"
-              type="number"
-              className="h-8 w-20 text-right"
-              min={1}
-              value={startLine}
-              onChange={(e) => onStartLineChange(Math.max(1, Number(e.target.value) || 1))}
-            />
-          </div>
+          <Field orientation="horizontal">
+            <FieldLabel htmlFor="number-of-gpus-f6l">Start Line</FieldLabel>
+            <ButtonGroup>
+              <Input
+                id="number-of-gpus-f6l"
+                value={startLine}
+                onChange={(e) => onStartLineChange(Number(e.target.value))}
+                size={3}
+                className="h-8 !w-14 font-mono"
+                maxLength={3}
+              />
+              <Button
+                variant="outline"
+                size="icon-sm"
+                type="button"
+                aria-label="Decrement"
+                onClick={() => onStartLineChange(startLine - 1)}
+                disabled={startLine <= 1}
+              >
+                <MinusIcon />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon-sm"
+                type="button"
+                aria-label="Increment"
+                onClick={() => onStartLineChange(startLine + 1)}
+                disabled={startLine >= 999}
+              >
+                <PlusIcon />
+              </Button>
+            </ButtonGroup>
+          </Field>
         )}
       </div>
 
