@@ -54,6 +54,7 @@ export function PreviewPanel({
         canvasRef={canvasRef}
         layoutError={layoutError}
         onDismissError={onDismissError}
+        isLoading={!stepLayouts}
       />
 
       <PlayerControls

@@ -7,12 +7,14 @@ interface CanvasPreviewProps {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   layoutError: string | null;
   onDismissError: () => void;
+  isLoading?: boolean;
 }
 
 export function CanvasPreview({
   canvasRef,
   layoutError,
   onDismissError,
+  isLoading
 }: CanvasPreviewProps) {
   return (
     <div className="flex-1 relative min-h-0 flex flex-col">
@@ -25,14 +27,15 @@ export function CanvasPreview({
         </div>
       )}
 
-      {/* Canvas Container */}
       <div className="flex-1 overflow-auto flex items-center justify-center p-8 bg-[url('/grid-pattern.svg')] dark:bg-[url('/grid-pattern-dark.svg')] bg-center">
-        <div className="relative shadow-2xl rounded-lg overflow-hidden ring-1 ring-black/5 dark:ring-white/10 bg-zinc-950 max-w-full">
-          <canvas
-            ref={canvasRef}
-            className="block max-w-full h-auto"
-          />
-        </div>
+        {!isLoading && (
+          <div className="relative shadow-2xl rounded-lg overflow-hidden ring-1 ring-black/5 dark:ring-white/10 bg-zinc-950 max-w-full opacity-0 animate-[fadeIn_0.3s_ease-in-out_forwards]">
+            <canvas
+              ref={canvasRef}
+              className="block max-w-full h-auto"
+            />
+          </div>
+        )}
       </div>
     </div>
   );

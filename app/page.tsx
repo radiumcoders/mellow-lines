@@ -240,8 +240,9 @@ export default function Home() {
   );
 
   useEffect(() => {
+    if (!stepLayouts || stepLayouts.length === 0) return;
     renderAt(playheadMs);
-  }, [playheadMs, renderAt]);
+  }, [playheadMs, renderAt, stepLayouts]);
 
   useEffect(() => {
     if (!isPlaying) {
