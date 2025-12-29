@@ -85,7 +85,7 @@ export function StepsEditorHeader({
         >
           <ComboboxInput placeholder="Select a language..." className="h-8 w-[140px] text-xs" />
           <ComboboxContent>
-            <ComboboxEmpty>No items found.</ComboboxEmpty>
+            <ComboboxEmpty>No languages found</ComboboxEmpty>
             <ComboboxList>
               {(item) => (
                 <ComboboxItem key={item} value={item}>
@@ -97,18 +97,20 @@ export function StepsEditorHeader({
         </Combobox>
 
         <Combobox
+          items={AVAILABLE_THEMES}
           value={theme}
           onValueChange={(v) => v && onThemeChange(v as ShikiThemeChoice)}
           itemToStringLabel={(value) => formatName(value as string)}
         >
           <ComboboxInput placeholder="Select theme..." className="h-8 w-[140px] text-xs" />
           <ComboboxContent>
+            <ComboboxEmpty>No themes found</ComboboxEmpty>
             <ComboboxList>
-              {AVAILABLE_THEMES.map((t) => (
-                <ComboboxItem key={t} value={t} className="text-xs">
-                  {formatName(t)}
+              {(item) => (
+                <ComboboxItem key={item} value={item}>
+                  {formatName(item)}
                 </ComboboxItem>
-              ))}
+              )}
             </ComboboxList>
           </ComboboxContent>
         </Combobox>
