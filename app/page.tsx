@@ -16,31 +16,31 @@ export default function Page() {
                 <div className="container mx-auto px-4 py-8 flex-1 flex flex-col">
                     <div className="flex flex-col lg:flex-row gap-8 items-center flex-1">
                         {/* Hero Text - Left Column */}
-                        <div className="text-left space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-1000 flex-1">
+                        <div className="text-left space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-1000 flex-1">
                             <div className="flex justify-start">
-                                <Badge variant="secondary" className="px-4 py-1.5 text-sm rounded-full bg-background/50 backdrop-blur-md border border-border">
+                                <Badge variant="secondary" className="text-sm rounded-full bg-background/50 backdrop-blur-md border border-border">
                                     ✨ v1.0 Public Beta
                                 </Badge>
                             </div>
 
-                            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-foreground drop-shadow-sm leading-[1.1]">
+                            <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-foreground drop-shadow-sm leading-[1.1]">
                                 Transform Code <br />
                                 into <span className="text-primary inline-block decoration-primary/30 underline decoration-wavy decoration-2 underline-offset-4">Motion</span>
                             </h1>
 
-                            <p className="text-lg md:text-xl text-muted-foreground max-w-xl leading-relaxed">
+                            <p className="text-xl md:text-2xl lg:text-3xl text-muted-foreground max-w-xl leading-relaxed">
                                 Create stunning, cinematic code walkthroughs in seconds.
                                 The ultimate storytelling tool for developers.
                             </p>
 
-                            <div className="flex flex-col sm:flex-row gap-3 justify-start pt-2">
+                            <div className="flex flex-col sm:flex-row gap-4 justify-start pt-4">
                                 <Link href="/editor">
-                                    <Button size="lg" className="h-12 px-6 text-base rounded-full shadow-lg shadow-primary/20 transition-transform hover:scale-105">
-                                        Open Editor <ArrowRight className="ml-2 w-4 h-4" />
+                                    <Button size="lg" className="h-14 px-8 text-lg rounded-full shadow-lg shadow-primary/20 transition-transform hover:scale-105">
+                                        Open Editor <ArrowRight className="ml-2 w-5 h-5" />
                                     </Button>
                                 </Link>
                                 <Link href="https://github.com" target="_blank">
-                                    <Button size="lg" variant="outline" className="h-12 px-6 text-base rounded-full bg-background/40 backdrop-blur-md border border-border hover:bg-background/60 transition-transform hover:scale-105 hover:text-primary">
+                                    <Button size="lg" variant="outline" className="h-14 px-8 text-lg rounded-full bg-background/40 backdrop-blur-md border border-border hover:bg-background/60 transition-transform hover:scale-105 hover:text-primary">
                                         Star on GitHub
                                     </Button>
                                 </Link>
@@ -52,7 +52,7 @@ export default function Page() {
                             <div className="relative rounded-xl border border-border bg-card/50 dark:bg-white/5 shadow-2xl backdrop-blur-sm overflow-hidden ring-1 ring-black/5 dark:ring-white/20">
                                 <div className="absolute inset-0 bg-primary/20 mix-blend-overlay z-10 pointer-events-none" />
                                 <video
-                                    src="/demo.mp4"
+                                    src="/demo_slow.mp4"
                                     autoPlay
                                     muted
                                     loop

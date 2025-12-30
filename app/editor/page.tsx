@@ -33,9 +33,9 @@ export default function Home() {
   const [theme, setTheme] = useState<ShikiThemeChoice>("vesper");
   const [fps, setFps] = useState<number>(60);
   const [transitionMs, setTransitionMs] = useState<number>(800);
-  const [startHoldMs, setStartHoldMs] = useState<number>(250);
-  const [betweenHoldMs, setBetweenHoldMs] = useState<number>(120);
-  const [endHoldMs, setEndHoldMs] = useState<number>(250);
+  const [startHoldMs, setStartHoldMs] = useState<number>(500);
+  const [betweenHoldMs, setBetweenHoldMs] = useState<number>(200);
+  const [endHoldMs, setEndHoldMs] = useState<number>(500);
 
   // Compute steps from simple mode
   const steps = useMemo<MagicMoveStep[]>(() => {
