@@ -30,7 +30,7 @@ export default function Page() {
 
                             <p className="text-xl md:text-2xl lg:text-3xl text-muted-foreground max-w-xl leading-relaxed">
                                 Create stunning, cinematic code walkthroughs in seconds.
-                                The ultimate storytelling tool for developers.
+                                The ultimate tool for developers, content creators and educators.
                             </p>
 
                             <div className="flex flex-col sm:flex-row gap-4 justify-start pt-4">
