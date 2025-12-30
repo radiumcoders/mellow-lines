@@ -204,7 +204,10 @@ export default function Home() {
             tokens: animated,
             showLineNumbers: a.showLineNumbers || b.showLineNumbers,
             startLine: b.startLine,
-            lineCount: b.tokenLineCount,
+            lineCount: Math.max(a.tokenLineCount, b.tokenLineCount),
+            prevLineCount: a.tokenLineCount,
+            targetLineCount: b.tokenLineCount,
+            transitionProgress: progress,
           });
           return;
         }

@@ -44,6 +44,9 @@ export function drawCodeFrame(opts: {
   showLineNumbers?: boolean
   startLine?: number
   lineCount?: number
+  prevLineCount?: number
+  targetLineCount?: number
+  transitionProgress?: number
 }) {
   const { ctx, config, layout } = opts
 
@@ -92,12 +95,45 @@ export function drawCodeFrame(opts: {
     ctx.font = `${config.fontSize}px ${config.fontFamily}`
     ctx.textBaseline = "top"
     ctx.fillStyle = layout.gutter.textColor
+    
+    // Transition logic for line numbers
+    const prevCount = opts.prevLineCount ?? lineCount
+    const targetCount = opts.targetLineCount ?? lineCount
+    const progress = opts.transitionProgress ?? 1
+
     for (let i = 0; i < lineCount; i++) {
+      let alpha = 0.9
+      
+      // If we are in a transition
+      if (opts.transitionProgress !== undefined) {
+        const inPrev = i < prevCount
+        const inTarget = i < targetCount
+        
+        if (inPrev && inTarget) {
+          // Line exists in both source and target
+          alpha = 0.9
+        } else if (!inPrev && inTarget) {
+          // Line is appearing (fade in)
+          // Use cubic easing for smoother appearance: t^3
+          const t = Math.max(0, Math.min(1, progress))
+          alpha = 0.9 * (t * t * t)
+        } else if (inPrev && !inTarget) {
+          // Line is disappearing (fade out)
+          const t = Math.max(0, Math.min(1, 1 - progress))
+          alpha = 0.9 * (t * t * t)
+        } else {
+          // Should not happen if loop bound is correct, but safe fallback
+          alpha = 0
+        }
+      }
+
+      if (alpha < 0.01) continue
+
       const n = startLine + i
       const label = String(n)
       const y = config.paddingY + i * config.lineHeight
       const w = ctx.measureText(label).width
-      ctx.globalAlpha = 0.9
+      ctx.globalAlpha = alpha
       ctx.fillText(label, config.paddingX + gutterWidth - 16 - w, y)
     }
   }
