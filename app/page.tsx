@@ -92,7 +92,7 @@ export default function Page() {
             {/* Simple Footer */}
             <footer className="relative z-10 flex-shrink-0 h-14 flex items-center justify-center text-center text-muted-foreground text-sm bg-background/60 backdrop-blur-xl border-t border-border">
                 <div className="container mx-auto flex items-center justify-center gap-4">
-                    <p>© 2025 mellowlines. All rights reserved.</p>
+                    <p>© 2026 mellowlines. All rights reserved.</p>
                     <div className="flex items-center gap-3">
                         <a
                             href="https://github.com/kostyniuk/mellow-lines"
