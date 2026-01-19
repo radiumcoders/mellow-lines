@@ -6,14 +6,17 @@ import { animateLayouts } from "../lib/magicMove/animate";
 import { drawCodeFrame } from "../lib/magicMove/canvasRenderer";
 import {
   calculateCanvasHeight,
+  calculateCanvasWidth,
   layoutTokenLinesToCanvas,
   makeDefaultLayoutConfig,
+  makePreviewLayoutConfig,
 } from "../lib/magicMove/codeLayout";
 import type { LayoutResult } from "../lib/magicMove/codeLayout";
 import {
   getThemeVariant,
   shikiTokenizeToLines,
   type ShikiThemeChoice,
+  type TokenLine,
 } from "../lib/magicMove/shikiHighlighter";
 import type { MagicMoveStep, SimpleStep } from "../lib/magicMove/types";
 import { recordCanvasToWebm } from "../lib/video/recordCanvas";
@@ -29,6 +32,11 @@ type StepLayout = {
   tokenLineCount: number;
   startLine: number;
   showLineNumbers: boolean;
+};
+
+type CanvasDimensions = {
+  width: number;
+  height: number;
 };
 
 export default function Home() {
@@ -57,7 +65,17 @@ export default function Home() {
   }, [simpleSteps, selectedLang, simpleShowLineNumbers, simpleStartLine]);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [stepLayouts, setStepLayouts] = useState<StepLayout[] | null>(null);
+  const [canvasDimensions, setCanvasDimensions] = useState<CanvasDimensions>({ width: 1920, height: 1080 });
   const [layoutError, setLayoutError] = useState<string | null>(null);
+
+  // Store tokenized data for reuse in export
+  type StepTokenData = {
+    lines: TokenLine[];
+    bg: string;
+    showLineNumbers: boolean;
+    startLine: number;
+  };
+  const stepTokenDataRef = useRef<StepTokenData[] | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [playheadMs, setPlayheadMs] = useState(0);
@@ -90,36 +108,98 @@ export default function Home() {
       const ctx = c.getContext("2d");
       if (!ctx) throw new Error("Canvas 2D not supported");
 
-      const nextLayouts: StepLayout[] = [];
+      // Phase 1: Tokenize all steps and collect data for dimension calculation
+      // Use preview config for smaller font size in preview
+      const previewCfg = makePreviewLayoutConfig();
+      ctx.font = `${previewCfg.fontSize}px ${previewCfg.fontFamily}`;
+      const charWidth = ctx.measureText("M").width;
+
+      type StepData = {
+        lines: Awaited<ReturnType<typeof shikiTokenizeToLines>>["lines"];
+        bg: string;
+        showLineNumbers: boolean;
+        startLine: number;
+      };
+
+      const stepData: StepData[] = [];
+
       for (const step of steps) {
         const { lines, bg } = await shikiTokenizeToLines({
           code: step.code,
           lang: step.lang,
           theme,
         });
+        stepData.push({
+          lines,
+          bg,
+          showLineNumbers: step.meta.lines,
+          startLine: step.meta.startLine,
+        });
+      }
 
-        const cfg = makeDefaultLayoutConfig();
-        cfg.showLineNumbers = step.meta.lines;
-        cfg.startLine = step.meta.startLine;
+      if (cancelled) return;
+
+      // Phase 2: Calculate required dimensions for each step
+      const stepDimensions = stepData.map((data) => {
+        const lineCount = data.lines.length;
+        const lastLineNumber = data.startLine + Math.max(0, lineCount - 1);
+        const digits = String(lastLineNumber).length;
+        const gutterPadding = data.showLineNumbers ? 16 : 0;
+        const gutterWidth = data.showLineNumbers ? Math.ceil(digits * charWidth + gutterPadding * 2) : 0;
+
+        const requiredWidth = calculateCanvasWidth({
+          tokenLines: data.lines,
+          charWidth,
+          paddingX: previewCfg.paddingX,
+          gutterWidth,
+          minWidth: 0,  // No minimum for preview - shrink to fit
+        });
+
+        const requiredHeight = calculateCanvasHeight({
+          lineCount: data.lines.length,
+          lineHeight: previewCfg.lineHeight,
+          paddingY: previewCfg.paddingY,
+          minHeight: 0,  // No minimum for preview - shrink to fit
+        });
+
+        return { width: requiredWidth, height: requiredHeight };
+      });
+
+      // Phase 3: Determine max dimensions across all steps
+      const maxWidth = Math.max(...stepDimensions.map((d) => d.width));
+      const maxHeight = Math.max(...stepDimensions.map((d) => d.height));
+
+      // Phase 4: Compute layouts with consistent dimensions
+      const nextLayouts: StepLayout[] = [];
+
+      for (const data of stepData) {
+        const cfg = makePreviewLayoutConfig();
+        cfg.canvasWidth = maxWidth;
+        cfg.canvasHeight = maxHeight;
+        cfg.showLineNumbers = data.showLineNumbers;
+        cfg.startLine = data.startLine;
 
         const layout = layoutTokenLinesToCanvas({
           ctx,
-          tokenLines: lines,
-          bg,
+          tokenLines: data.lines,
+          bg: data.bg,
           theme: getThemeVariant(theme),
           config: cfg,
         });
 
         nextLayouts.push({
           layout,
-          tokenLineCount: lines.length,
+          tokenLineCount: data.lines.length,
           startLine: cfg.startLine,
           showLineNumbers: cfg.showLineNumbers,
         });
       }
 
       if (cancelled) return;
+      setCanvasDimensions({ width: maxWidth, height: maxHeight });
       setStepLayouts(nextLayouts);
+      // Store tokenized data for potential use in export
+      stepTokenDataRef.current = stepData;
     })().catch((e: unknown) => {
       if (cancelled) return;
       setLayoutError(e instanceof Error ? e.message : "Failed to build preview");
@@ -139,29 +219,35 @@ export default function Home() {
   }, [steps, theme, fps, transitionMs, startHoldMs, betweenHoldMs, endHoldMs]); // Only those that affect the video content
 
   const renderAt = useCallback(
-    (ms: number) => {
+    (ms: number, overrideDimensions?: CanvasDimensions) => {
       const canvas = canvasRef.current;
       if (!canvas || !stepLayouts || stepLayouts.length === 0) return;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      const cfg = makeDefaultLayoutConfig();
-      canvas.width = cfg.canvasWidth;
+      // Use override dimensions (for export) or computed dimensions (for preview)
+      const dims = overrideDimensions ?? canvasDimensions;
 
-      // Calculate dynamic height based on maximum line count across all steps
-      const maxLineCount = Math.max(...stepLayouts.map((s) => s.tokenLineCount));
-      const calculatedHeight = calculateCanvasHeight({
-        lineCount: maxLineCount,
-        lineHeight: cfg.lineHeight,
-        paddingY: cfg.paddingY,
-        minHeight: 1080, // Minimum Full HD height
-      });
-      // Only update height if it's different (avoids unnecessary resets during export)
-      if (canvas.height !== calculatedHeight) {
-        canvas.height = calculatedHeight;
-      }
-      // Ensure renderer config matches actual canvas size (otherwise drawCodeFrame clips)
-      cfg.canvasHeight = canvas.height;
+      // Use 2x pixel ratio for sharp rendering on retina displays
+      const PIXEL_RATIO = 2;
+
+      // Use preview config for preview rendering
+      const cfg = makePreviewLayoutConfig();
+      cfg.canvasWidth = dims.width;
+      cfg.canvasHeight = dims.height;
+
+      // Set canvas internal size to 2x for retina sharpness
+      const targetWidth = dims.width * PIXEL_RATIO;
+      const targetHeight = dims.height * PIXEL_RATIO;
+
+      // Always set canvas size and CSS dimensions
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      canvas.style.width = `${dims.width}px`;
+      canvas.style.height = `${dims.height}px`;
+
+      // Reset transform and scale context for 2x rendering
+      ctx.setTransform(PIXEL_RATIO, 0, 0, PIXEL_RATIO, 0, 0);
 
       const clampMs = Math.max(0, Math.min(timeline.totalMs, ms));
 
@@ -246,7 +332,7 @@ export default function Home() {
         lineCount: last.tokenLineCount,
       });
     },
-    [stepLayouts, theme, timeline, transitionMs],
+    [stepLayouts, theme, timeline, transitionMs, canvasDimensions],
   );
 
   useEffect(() => {
@@ -310,11 +396,8 @@ export default function Home() {
     setSimpleSteps(updated);
   };
 
-  // ... existing imports
-
   const onExport = async (format: "webm" | "mp4") => {
-    if (!canvasRef.current) return;
-    if (!stepLayouts || stepLayouts.length === 0) return;
+    if (!stepTokenDataRef.current || stepTokenDataRef.current.length === 0) return;
 
     setIsExporting(true);
     setExportPhase("recording");
@@ -322,39 +405,190 @@ export default function Home() {
     if (downloadUrl) URL.revokeObjectURL(downloadUrl);
     setDownloadUrl(null);
 
-    const canvas = canvasRef.current;
-    const cfg = makeDefaultLayoutConfig();
+    // Create a separate offscreen canvas for export (don't use the visible preview canvas)
+    const exportCanvas = document.createElement("canvas");
+    const ctx = exportCanvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas 2D not supported");
 
-    // Calculate and set fixed canvas height for export (based on max line count)
-    const maxLineCount = Math.max(...stepLayouts.map((s) => s.tokenLineCount));
-    const exportHeight = calculateCanvasHeight({
-      lineCount: maxLineCount,
-      lineHeight: cfg.lineHeight,
-      paddingY: cfg.paddingY,
-      minHeight: 1080,
+    // Use export config (26px font, 40px line height, 64px padding)
+    const exportCfg = makeDefaultLayoutConfig();
+    ctx.font = `${exportCfg.fontSize}px ${exportCfg.fontFamily}`;
+    const charWidth = ctx.measureText("M").width;
+
+    // Calculate dimensions for each step using export config
+    const stepDimensions = stepTokenDataRef.current.map((data) => {
+      const lineCount = data.lines.length;
+      const lastLineNumber = data.startLine + Math.max(0, lineCount - 1);
+      const digits = String(lastLineNumber).length;
+      const gutterPadding = data.showLineNumbers ? 16 : 0;
+      const gutterWidth = data.showLineNumbers ? Math.ceil(digits * charWidth + gutterPadding * 2) : 0;
+
+      const requiredWidth = calculateCanvasWidth({
+        tokenLines: data.lines,
+        charWidth,
+        paddingX: exportCfg.paddingX,
+        gutterWidth,
+        minWidth: 0,
+      });
+
+      const requiredHeight = calculateCanvasHeight({
+        lineCount: data.lines.length,
+        lineHeight: exportCfg.lineHeight,
+        paddingY: exportCfg.paddingY,
+        minHeight: 0,
+      });
+
+      return { width: requiredWidth, height: requiredHeight };
     });
-    canvas.width = cfg.canvasWidth;
-    canvas.height = exportHeight;
+
+    // Get max dimensions across all steps
+    const exportWidth = Math.max(...stepDimensions.map((d) => d.width));
+    const exportHeight = Math.max(...stepDimensions.map((d) => d.height));
+
+    // Compute export layouts with content-sized dimensions
+    const exportLayouts: StepLayout[] = [];
+    for (const data of stepTokenDataRef.current) {
+      const cfg = makeDefaultLayoutConfig();
+      cfg.canvasWidth = exportWidth;
+      cfg.canvasHeight = exportHeight;
+      cfg.showLineNumbers = data.showLineNumbers;
+      cfg.startLine = data.startLine;
+
+      const layout = layoutTokenLinesToCanvas({
+        ctx,
+        tokenLines: data.lines,
+        bg: data.bg,
+        theme: getThemeVariant(theme),
+        config: cfg,
+      });
+
+      exportLayouts.push({
+        layout,
+        tokenLineCount: data.lines.length,
+        startLine: cfg.startLine,
+        showLineNumbers: cfg.showLineNumbers,
+      });
+    }
+
+    // Set export canvas to export dimensions (1x, no pixel ratio for video)
+    exportCanvas.width = exportWidth;
+    exportCanvas.height = exportHeight;
+
+    const finalExportCfg = makeDefaultLayoutConfig();
+    finalExportCfg.canvasWidth = exportWidth;
+    finalExportCfg.canvasHeight = exportHeight;
+
+    // Local render function for export that uses export layouts
+    const renderExportFrame = (ms: number) => {
+      const ctx = exportCanvas.getContext("2d");
+      if (!ctx) return;
+
+      // Reset transform (preview uses 2x, export uses 1x)
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+      const clampMs = Math.max(0, Math.min(timeline.totalMs, ms));
+      const stepCount = exportLayouts.length;
+
+      if (stepCount === 1) {
+        const only = exportLayouts[0]!;
+        drawCodeFrame({
+          ctx,
+          config: finalExportCfg,
+          layout: only.layout,
+          theme: getThemeVariant(theme),
+          showLineNumbers: only.showLineNumbers,
+          startLine: only.startLine,
+          lineCount: only.tokenLineCount,
+        });
+        return;
+      }
+
+      let t = clampMs;
+      if (t < timeline.startHold) {
+        const first = exportLayouts[0]!;
+        drawCodeFrame({
+          ctx,
+          config: finalExportCfg,
+          layout: first.layout,
+          theme: getThemeVariant(theme),
+          showLineNumbers: first.showLineNumbers,
+          startLine: first.startLine,
+          lineCount: first.tokenLineCount,
+        });
+        return;
+      }
+      t -= timeline.startHold;
+
+      for (let i = 0; i < stepCount - 1; i++) {
+        const a = exportLayouts[i]!;
+        const b = exportLayouts[i + 1]!;
+
+        if (t <= transitionMs) {
+          const progress = transitionMs <= 0 ? 1 : t / transitionMs;
+          const animated = animateLayouts({ from: a.layout, to: b.layout, progress });
+          drawCodeFrame({
+            ctx,
+            config: finalExportCfg,
+            layout: b.layout,
+            theme: getThemeVariant(theme),
+            tokens: animated,
+            showLineNumbers: a.showLineNumbers || b.showLineNumbers,
+            startLine: b.startLine,
+            lineCount: Math.max(a.tokenLineCount, b.tokenLineCount),
+            prevLineCount: a.tokenLineCount,
+            targetLineCount: b.tokenLineCount,
+            transitionProgress: progress,
+          });
+          return;
+        }
+
+        t -= transitionMs;
+        if (t <= timeline.betweenHold) {
+          drawCodeFrame({
+            ctx,
+            config: finalExportCfg,
+            layout: b.layout,
+            theme: getThemeVariant(theme),
+            showLineNumbers: b.showLineNumbers,
+            startLine: b.startLine,
+            lineCount: b.tokenLineCount,
+          });
+          return;
+        }
+        t -= timeline.betweenHold;
+      }
+
+      const last = exportLayouts[stepCount - 1]!;
+      drawCodeFrame({
+        ctx,
+        config: finalExportCfg,
+        layout: last.layout,
+        theme: getThemeVariant(theme),
+        showLineNumbers: last.showLineNumbers,
+        startLine: last.startLine,
+        lineCount: last.tokenLineCount,
+      });
+    };
 
     const durationMs = timeline.totalMs;
-    const start = performance.now();
     let cancelled = false;
 
-    const renderLoop = () => {
-      if (cancelled) return;
-      const elapsed = performance.now() - start;
-      renderAt(elapsed);
-      if (elapsed < durationMs) requestAnimationFrame(renderLoop);
-    };
-    requestAnimationFrame(renderLoop);
+    // Draw initial frame synchronously before starting recording
+    renderExportFrame(0);
 
     try {
       let blob: Blob | null = await recordCanvasToWebm({
-        canvas,
+        canvas: exportCanvas,
         fps,
         durationMs,
         onProgress: (elapsed, total) => {
           setExportProgress(total <= 0 ? 0 : elapsed / total);
+        },
+        // Pass render function to be called each frame from inside the recording loop
+        onFrame: (elapsed) => {
+          if (!cancelled) {
+            renderExportFrame(elapsed);
+          }
         },
       });
 
@@ -387,8 +621,6 @@ export default function Home() {
       setIsExporting(false);
       setExportPhase(null);
       setExportProgress(0);
-      setPlayheadMs(0);
-      renderAt(0);
     }
   };
 

@@ -51,7 +51,7 @@ export function StepEditorItem({
           onChange={onCodeChange}
           placeholder={`// Enter code for step ${index + 1}...`}
           className="bg-background"
-          maxLines={40}
+          maxLines={30}
         />
       </div>
     </div>

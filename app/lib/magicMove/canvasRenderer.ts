@@ -23,9 +23,11 @@ function clearAndPaintBackground(opts: {
   config: CanvasLayoutConfig;
   bg: string;
 }) {
-  const { ctx, bg } = opts;
-  const w = ctx.canvas.width;
-  const h = ctx.canvas.height;
+  const { ctx, config, bg } = opts;
+  // Use config dimensions (logical size) for clearing/filling
+  // The context transform will scale to actual canvas size
+  const w = config.canvasWidth;
+  const h = config.canvasHeight;
   ctx.clearRect(0, 0, w, h);
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, w, h);
@@ -52,11 +54,11 @@ export function drawCodeFrame(opts: {
 
   clearAndPaintBackground({ ctx, config, bg: layout.bg });
 
-  // Card background
+  // Card background - use config dimensions (logical size), not canvas dimensions (may be 2x for retina)
   const cardX = 32;
   const cardY = 32;
-  const cardW = ctx.canvas.width - 64;
-  const cardH = ctx.canvas.height - 64;
+  const cardW = config.canvasWidth - 64;
+  const cardH = config.canvasHeight - 64;
   const cardBg = opts.theme === "dark" ? "rgba(255,255,255,0.04)" : "rgba(17,24,39,0.03)";
   const cardBorder = opts.theme === "dark" ? "rgba(255,255,255,0.08)" : "rgba(17,24,39,0.10)";
 
