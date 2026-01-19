@@ -35,12 +35,13 @@ export type LayoutResult = {
     dividerColor: string;
     textColor: string;
   };
+  tokenLineCount: number;
 };
 
 export function makeDefaultLayoutConfig(): CanvasLayoutConfig {
   return {
     canvasWidth: 1920,
-    canvasHeight: 1080, // Will be overridden by calculateCanvasHeight when needed
+    canvasHeight: 1080,
     paddingX: 64,
     paddingY: 64,
     lineHeight: 40,
@@ -52,10 +53,24 @@ export function makeDefaultLayoutConfig(): CanvasLayoutConfig {
   };
 }
 
+export function makePreviewLayoutConfig(): CanvasLayoutConfig {
+  return {
+    canvasWidth: 800,
+    canvasHeight: 600,
+    paddingX: 40,
+    paddingY: 40,
+    lineHeight: 24,
+    fontSize: 16,
+    fontFamily:
+      'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+    showLineNumbers: false,
+    startLine: 1,
+  };
+}
+
 /**
  * Calculate the minimum canvas height needed to display all lines.
  * Ensures all content is visible without clipping.
- * Adds one extra line height at the bottom for visual spacing.
  */
 export function calculateCanvasHeight(opts: {
   lineCount: number;
@@ -63,11 +78,105 @@ export function calculateCanvasHeight(opts: {
   paddingY: number;
   minHeight?: number;
 }): number {
-  const { lineCount, lineHeight, paddingY, minHeight = 1080 } = opts;
+  const { lineCount, lineHeight, paddingY, minHeight = 0 } = opts;
   const contentHeight = lineCount * lineHeight;
-  const extraBottomSpace = lineHeight; // One empty line at bottom
-  const totalHeight = contentHeight + paddingY * 2 + extraBottomSpace;
-  return Math.max(minHeight, totalHeight);
+  // Add extra padding at bottom for visual balance
+  const bottomBuffer = Math.ceil(lineHeight / 2);
+  const totalHeight = contentHeight + paddingY * 2 + bottomBuffer;
+  return Math.ceil(Math.max(minHeight, totalHeight));
+}
+
+/**
+ * Calculate the minimum canvas width needed to display the longest line.
+ * Ensures all content is visible without clipping.
+ */
+export function calculateCanvasWidth(opts: {
+  tokenLines: TokenLine[];
+  charWidth: number;
+  paddingX: number;
+  gutterWidth: number;
+  minWidth?: number;
+}): number {
+  const { tokenLines, charWidth, paddingX, gutterWidth, minWidth = 0 } = opts;
+
+  let maxLineLength = 0;
+  for (const line of tokenLines) {
+    let lineLength = 0;
+    for (const token of line.tokens) {
+      lineLength += token.content.replace(/\t/g, "  ").length;
+    }
+    maxLineLength = Math.max(maxLineLength, lineLength);
+  }
+
+  const contentWidth = Math.ceil(maxLineLength * charWidth);
+  const gutterGap = gutterWidth > 0 ? 12 : 0;
+  const totalWidth = paddingX * 2 + gutterWidth + gutterGap + contentWidth;
+
+  return Math.ceil(Math.max(minWidth, totalWidth));
+}
+
+/**
+ * Wrap token lines that exceed maxContentWidth for export.
+ * Splits lines at token boundaries, or within tokens if a single token is too long.
+ */
+export function wrapTokenLines(opts: {
+  tokenLines: TokenLine[];
+  maxContentWidth: number;
+  charWidth: number;
+}): TokenLine[] {
+  const { tokenLines, maxContentWidth, charWidth } = opts;
+  const maxChars = Math.floor(maxContentWidth / charWidth);
+
+  if (maxChars <= 0) return tokenLines;
+
+  const result: TokenLine[] = [];
+
+  for (const line of tokenLines) {
+    let currentLine: { content: string; color: string }[] = [];
+    let currentLength = 0;
+
+    for (const token of line.tokens) {
+      const content = token.content.replace(/\t/g, "  ");
+      let remaining = content;
+
+      while (remaining.length > 0) {
+        const spaceLeft = maxChars - currentLength;
+
+        if (spaceLeft <= 0) {
+          // Current line is full, start a new line
+          result.push({ tokens: currentLine });
+          currentLine = [];
+          currentLength = 0;
+          continue;
+        }
+
+        if (remaining.length <= spaceLeft) {
+          // Token fits on current line
+          currentLine.push({ content: remaining, color: token.color });
+          currentLength += remaining.length;
+          remaining = "";
+        } else {
+          // Token needs to be split
+          const chunk = remaining.slice(0, spaceLeft);
+          remaining = remaining.slice(spaceLeft);
+          currentLine.push({ content: chunk, color: token.color });
+          result.push({ tokens: currentLine });
+          currentLine = [];
+          currentLength = 0;
+        }
+      }
+    }
+
+    // Push remaining tokens from this original line
+    if (currentLine.length > 0) {
+      result.push({ tokens: currentLine });
+    } else if (line.tokens.length === 0) {
+      // Preserve empty lines
+      result.push({ tokens: [] });
+    }
+  }
+
+  return result;
 }
 
 function measureCharWidth(ctx: CanvasRenderingContext2D): number {
@@ -140,5 +249,6 @@ export function layoutTokenLinesToCanvas(opts: {
       dividerColor,
       textColor: lineNoColor,
     },
+    tokenLineCount: tokenLines.length,
   };
 }

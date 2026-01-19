@@ -3,6 +3,7 @@ export type RecordCanvasOptions = {
   fps: number;
   mimeTypePreference?: string[];
   onProgress?: (elapsedMs: number, totalMs: number) => void;
+  onFrame?: (elapsedMs: number) => void;
 };
 
 function pickMimeType(
@@ -57,7 +58,10 @@ export async function recordCanvasToWebm(opts: RecordCanvasOptions & { durationM
   await new Promise<void>((resolve) => {
     const tick = () => {
       const now = performance.now();
-      opts.onProgress?.(Math.min(opts.durationMs, now - startedAt), opts.durationMs);
+      const elapsed = Math.min(opts.durationMs, now - startedAt);
+      // Render frame BEFORE progress update so captureStream gets the new content
+      opts.onFrame?.(elapsed);
+      opts.onProgress?.(elapsed, opts.durationMs);
       if (now >= stopAt) {
         recorder.stop();
         resolve();
