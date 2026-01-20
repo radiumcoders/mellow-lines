@@ -2,57 +2,45 @@ import type { SimpleStep } from "./magicMove/types";
 
 export const DEFAULT_STEPS: SimpleStep[] = [
   {
-    code: `// Step 1: Simple boolean state
-import { useState } from 'react';
+    code: `import { useState, useEffect } from 'react';
 
-export function AuthButton() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+export function User() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const handleLogin = async () => {
-    setIsLoading(true);
-    await new Promise(r => setTimeout(r, 1000));
-    setIsLoggedIn(true);
-    setIsLoading(false);
-  };
+  useEffect(() => {
+    fetch('/api/user')
+      .then(r => r.json())
+      .then(u => {
+        setUser(u);
+        setLoading(false);
+        setError(null);
+      })
+      .catch(e => {
+        setUser(null);
+        setLoading(false);
+        setError(e);
+      });
+  }, []);
 
-  return (
-    <button onClick={handleLogin}>
-      {isLoading ? 'Connecting...' : isLoggedIn ? 'Logout' : 'Login'}
-    </button>
-  );
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error</div>;
+  return <div>{user.name}</div>;
 }`,
   },
   {
-    code: `// Step 2: Encapsulated Reducer Logic
-import { useReducer } from 'react';
+    code: `import { useQuery } from '@tanstack/react-query';
 
-type State = { status: 'idle' | 'loading' | 'authenticated' };
-type Action = { type: 'LOGIN_START' } | { type: 'LOGIN_SUCCESS' };
+export function User() {
+  const { data: user, isLoading, error } = useQuery({
+    queryKey: ['user'],
+    queryFn: () => fetch('/api/user').then(r => r.json())
+  });
 
-function authReducer(state: State, action: Action): State {
-  switch (action.type) {
-    case 'LOGIN_START': return { status: 'loading' };
-    case 'LOGIN_SUCCESS': return { status: 'authenticated' };
-    default: return state;
-  }
-}
-
-export function AuthButton() {
-  const [state, dispatch] = useReducer(authReducer, { status: 'idle' });
-
-  const handleLogin = async () => {
-    dispatch({ type: 'LOGIN_START' });
-    await new Promise(r => setTimeout(r, 1000));
-    dispatch({ type: 'LOGIN_SUCCESS' });
-  };
-
-  return (
-    <button onClick={handleLogin} disabled={state.status === 'loading'}>
-      {state.status === 'loading' ? 'Connecting...' :
-       state.status === 'authenticated' ? 'Logout' : 'Login'}
-    </button>
-  );
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error</div>;
+  return <div>{user.name}</div>;
 }`,
   },
 ];
