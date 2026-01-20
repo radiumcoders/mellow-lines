@@ -45,7 +45,7 @@ export default function Home() {
   const [simpleShowLineNumbers, setSimpleShowLineNumbers] = useState<boolean>(true);
   const [simpleStartLine, setSimpleStartLine] = useState<number>(1);
 
-  const [theme, setTheme] = useState<ShikiThemeChoice>("github-dark");
+  const [theme, setTheme] = useState<ShikiThemeChoice>("vitesse-dark");
   const [fps, setFps] = useState<number>(60);
   const [transitionMs, setTransitionMs] = useState<number>(1200);
   const [startHoldMs, setStartHoldMs] = useState<number>(500);
