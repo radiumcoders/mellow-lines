@@ -47,7 +47,7 @@ export default function Home() {
 
   const [theme, setTheme] = useState<ShikiThemeChoice>("vesper");
   const [fps, setFps] = useState<number>(60);
-  const [transitionMs, setTransitionMs] = useState<number>(800);
+  const [transitionMs, setTransitionMs] = useState<number>(1200);
   const [startHoldMs, setStartHoldMs] = useState<number>(500);
   const [betweenHoldMs, setBetweenHoldMs] = useState<number>(200);
   const [endHoldMs, setEndHoldMs] = useState<number>(500);
@@ -442,8 +442,11 @@ export default function Home() {
     });
 
     // Get max dimensions across all steps
-    const exportWidth = Math.max(...stepDimensions.map((d) => d.width));
-    const exportHeight = Math.max(...stepDimensions.map((d) => d.height));
+    const rawWidth = Math.max(...stepDimensions.map((d) => d.width));
+    const rawHeight = Math.max(...stepDimensions.map((d) => d.height));
+    // H.264 with yuv420p requires even dimensions
+    const exportWidth = rawWidth + (rawWidth % 2);
+    const exportHeight = rawHeight + (rawHeight % 2);
 
     // Compute export layouts with content-sized dimensions
     const exportLayouts: StepLayout[] = [];
