@@ -1,12 +1,13 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { Fragment, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ResizablePanel } from "@/components/ui/resizable";
 import { StepsEditorHeader } from "./steps-editor-header";
 import { StepEditorItem } from "./step-editor-item";
+import { StepInsertDivider } from "./step-insert-divider";
 import type { SimpleStep } from "@/app/lib/magicMove/types";
 import type { ShikiThemeChoice } from "@/app/lib/magicMove/shikiHighlighter";
 
@@ -29,6 +30,7 @@ interface StepsEditorProps {
   endHoldMs: number;
   onEndHoldMsChange: (value: number) => void;
   onAddStep: () => void;
+  onInsertStep: (atIndex: number) => void;
   onRemoveStep: (index: number) => void;
   onUpdateStep: (index: number, code: string) => void;
 }
@@ -52,6 +54,7 @@ export function StepsEditor({
   endHoldMs,
   onEndHoldMsChange,
   onAddStep,
+  onInsertStep,
   onRemoveStep,
   onUpdateStep,
 }: StepsEditorProps) {
@@ -97,19 +100,22 @@ export function StepsEditor({
       />
 
       <ScrollArea ref={scrollRef} className="flex-1 w-full min-h-0">
-        <div className="py-2 px-4 space-y-6 max-w-4xl mx-auto w-full pb-4">
+        <div className="py-2 px-4 space-y-2 max-w-4xl mx-auto w-full pb-4">
           {steps.map((step, index) => (
-            <StepEditorItem
-              key={index}
-              index={index}
-              code={step.code}
-              onCodeChange={(code) => onUpdateStep(index, code)}
-              onRemove={() => onRemoveStep(index)}
-              canRemove={steps.length > 1}
-              language={selectedLang}
-              theme={theme}
-            />
+            <Fragment key={step.id}>
+              <StepInsertDivider onInsert={() => onInsertStep(index)} />
+              <StepEditorItem
+                index={index}
+                code={step.code}
+                onCodeChange={(code) => onUpdateStep(index, code)}
+                onRemove={() => onRemoveStep(index)}
+                canRemove={steps.length > 1}
+                language={selectedLang}
+                theme={theme}
+              />
+            </Fragment>
           ))}
+          <StepInsertDivider onInsert={() => onInsertStep(steps.length)} />
 
           <Button
             variant="outline"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { nanoid } from "nanoid";
 
 import { animateLayouts } from "../lib/magicMove/animate";
 import { drawCodeFrame } from "../lib/magicMove/canvasRenderer";
@@ -381,8 +382,14 @@ export default function Home() {
   const canExport = !!stepLayouts && stepLayouts.length > 0;
 
   // Simple mode handlers
-  const addSimpleStep = () => {
-    setSimpleSteps([...simpleSteps, { code: `// Step ${simpleSteps.length + 1}` }]);
+  const insertSimpleStep = (atIndex?: number) => {
+    const insertAt = atIndex ?? simpleSteps.length;
+    const newStep = { id: nanoid(), code: "// New step" };
+    setSimpleSteps([
+      ...simpleSteps.slice(0, insertAt),
+      newStep,
+      ...simpleSteps.slice(insertAt)
+    ]);
   };
 
   const removeSimpleStep = (index: number) => {
@@ -392,7 +399,7 @@ export default function Home() {
 
   const updateSimpleStep = (index: number, code: string) => {
     const updated = [...simpleSteps];
-    updated[index] = { code };
+    updated[index] = { ...updated[index], code };
     setSimpleSteps(updated);
   };
 
@@ -648,7 +655,8 @@ export default function Home() {
           onBetweenHoldMsChange={setBetweenHoldMs}
           endHoldMs={endHoldMs}
           onEndHoldMsChange={setEndHoldMs}
-          onAddStep={addSimpleStep}
+          onAddStep={() => insertSimpleStep()}
+          onInsertStep={(index) => insertSimpleStep(index)}
           onRemoveStep={removeSimpleStep}
           onUpdateStep={updateSimpleStep}
         />

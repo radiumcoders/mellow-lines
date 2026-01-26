@@ -10,5 +10,6 @@ export type MagicMoveStep = {
 };
 
 export type SimpleStep = {
+  id: string;
   code: string;
 };

@@ -2,6 +2,7 @@ import type { SimpleStep } from "./magicMove/types";
 
 export const DEFAULT_STEPS: SimpleStep[] = [
   {
+    id: "default-step-1",
     code: `import { useState, useEffect } from 'react';
 
 export function User() {
@@ -30,6 +31,7 @@ export function User() {
 }`,
   },
   {
+    id: "default-step-2",
     code: `import { useQuery } from '@tanstack/react-query';
 
 export function User() {
