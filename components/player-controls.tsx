@@ -4,6 +4,7 @@ import { Play, Pause, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
+import { useThrottledValue } from "@tanstack/react-pacer";
 
 interface PlayerControlsProps {
   isPlaying: boolean;
@@ -24,6 +25,12 @@ export function PlayerControls({
   onReset,
   disabled = false,
 }: PlayerControlsProps) {
+  // Throttle (not debounce) because we want regular updates during playback.
+  // Debounce would wait for the value to stop changing, which never happens during playback.
+  const [throttledPlayheadMs] = useThrottledValue(playheadMs, {
+    wait: 100,
+  });
+
   return (
     <div className="flex-none border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-3 flex items-center gap-4">
       <Button
@@ -41,7 +48,7 @@ export function PlayerControls({
 
       <div className="flex-1 flex flex-col gap-1.5">
         <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
-          <span className="font-mono">{Math.round(playheadMs)}ms</span>
+          <span className="font-mono">{Math.round(throttledPlayheadMs)}ms</span>
           <span className="font-mono">{Math.round(totalMs)}ms</span>
         </div>
         <Slider
