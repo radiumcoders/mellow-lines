@@ -33,6 +33,7 @@ interface StepsEditorProps {
   onInsertStep: (atIndex: number) => void;
   onRemoveStep: (index: number) => void;
   onUpdateStep: (index: number, code: string) => void;
+  scrollToEndTrigger?: number;
 }
 
 export function StepsEditor({
@@ -57,10 +58,12 @@ export function StepsEditor({
   onInsertStep,
   onRemoveStep,
   onUpdateStep,
+  scrollToEndTrigger,
 }: StepsEditorProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!scrollToEndTrigger) return;
     if (scrollRef.current) {
       const scrollContainer = scrollRef.current.querySelector("[data-radix-scroll-area-viewport]");
       if (scrollContainer) {
@@ -70,7 +73,7 @@ export function StepsEditor({
         });
       }
     }
-  }, [steps.length]);
+  }, [scrollToEndTrigger]);
 
   return (
     <ResizablePanel

@@ -87,6 +87,7 @@ export default function Home() {
   const [exportPhase, setExportPhase] = useState<"recording" | "saving" | null>(null);
   const [exportProgress, setExportProgress] = useState<number>(0);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [scrollToEndTrigger, setScrollToEndTrigger] = useState(0);
 
   const timeline = useMemo(() => {
     const stepCount = steps.length;
@@ -384,12 +385,18 @@ export default function Home() {
   // Simple mode handlers
   const insertSimpleStep = (atIndex?: number) => {
     const insertAt = atIndex ?? simpleSteps.length;
+    const isAddingAtEnd = insertAt === simpleSteps.length;
+
     const newStep = { id: nanoid(), code: "// New step" };
     setSimpleSteps([
       ...simpleSteps.slice(0, insertAt),
       newStep,
       ...simpleSteps.slice(insertAt)
     ]);
+
+    if (isAddingAtEnd) {
+      setScrollToEndTrigger(prev => prev + 1);
+    }
   };
 
   const removeSimpleStep = (index: number) => {
@@ -659,6 +666,7 @@ export default function Home() {
           onInsertStep={(index) => insertSimpleStep(index)}
           onRemoveStep={removeSimpleStep}
           onUpdateStep={updateSimpleStep}
+          scrollToEndTrigger={scrollToEndTrigger}
         />
 
         <ResizableHandle />
