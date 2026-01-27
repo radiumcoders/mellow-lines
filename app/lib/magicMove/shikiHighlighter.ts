@@ -20,18 +20,49 @@ export const AVAILABLE_THEMES: readonly ShikiThemeChoice[] = [
 ] as const;
 
 export const AVAILABLE_LANGUAGES = [
+  // Web fundamentals
   "javascript",
   "typescript",
   "tsx",
   "jsx",
-  "json",
-  "sql",
-  "css",
   "html",
+  "css",
+  "json",
   "markdown",
+  // Shell
   "bash",
   "shell",
+  // Systems
+  "c",
+  "cpp",
   "rust",
+  "go",
+  // JVM / .NET
+  "java",
+  "kotlin",
+  "scala",
+  "csharp",
+  // Scripting
+  "python",
+  "ruby",
+  "php",
+  "lua",
+  // Mobile
+  "swift",
+  "dart",
+  // Functional
+  "elixir",
+  // Frontend frameworks
+  "svelte",
+  "vue",
+  // Data / Config
+  "sql",
+  "yaml",
+  "toml",
+  "graphql",
+  // DevOps
+  "dockerfile",
+  "terraform",
 ] as const;
 
 /**
@@ -63,18 +94,49 @@ async function getHighlighterOnce() {
           "vesper",
         ],
         langs: [
+          // Web fundamentals
           "javascript",
           "typescript",
           "tsx",
           "jsx",
-          "json",
-          "sql",
-          "css",
           "html",
+          "css",
+          "json",
           "markdown",
+          // Shell
           "bash",
           "shell",
+          // Systems
+          "c",
+          "cpp",
           "rust",
+          "go",
+          // JVM / .NET
+          "java",
+          "kotlin",
+          "scala",
+          "csharp",
+          // Scripting
+          "python",
+          "ruby",
+          "php",
+          "lua",
+          // Mobile
+          "swift",
+          "dart",
+          // Functional
+          "elixir",
+          // Frontend frameworks
+          "svelte",
+          "vue",
+          // Data / Config
+          "sql",
+          "yaml",
+          "toml",
+          "graphql",
+          // DevOps
+          "dockerfile",
+          "terraform",
         ],
       });
     })();
@@ -82,14 +144,25 @@ async function getHighlighterOnce() {
   return await highlighterPromise;
 }
 
+const LANG_ALIASES: Record<string, string> = {
+  js: "javascript",
+  ts: "typescript",
+  sh: "shell",
+  md: "markdown",
+  rs: "rust",
+  py: "python",
+  rb: "ruby",
+  yml: "yaml",
+  cs: "csharp",
+  "c++": "cpp",
+  tf: "terraform",
+  kt: "kotlin",
+  ex: "elixir",
+};
+
 function normalizeLang(lang: string): string {
   const l = (lang || "").toLowerCase();
-  if (l === "js") return "javascript";
-  if (l === "ts") return "typescript";
-  if (l === "sh") return "shell";
-  if (l === "md") return "markdown";
-  if (l === "rs") return "rust";
-  return l || "text";
+  return LANG_ALIASES[l] || l || "text";
 }
 
 export async function shikiTokenizeToLines(opts: {
