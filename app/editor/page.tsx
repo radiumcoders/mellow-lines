@@ -8,6 +8,7 @@ import { drawCodeFrame } from "../lib/magicMove/canvasRenderer";
 import {
   calculateCanvasHeight,
   calculateCanvasWidth,
+  GUTTER_PADDING,
   layoutTokenLinesToCanvas,
   makeDefaultLayoutConfig,
   makePreviewLayoutConfig,
@@ -141,19 +142,23 @@ export default function Home() {
 
       if (cancelled) return;
 
-      // Phase 2: Calculate required dimensions for each step
-      const stepDimensions = stepData.map((data) => {
+      // Calculate max gutter width across all steps for consistent token positioning
+      const maxDigits = Math.max(...stepData.map((data) => {
         const lineCount = data.lines.length;
         const lastLineNumber = data.startLine + Math.max(0, lineCount - 1);
-        const digits = String(lastLineNumber).length;
-        const gutterPadding = data.showLineNumbers ? 16 : 0;
-        const gutterWidth = data.showLineNumbers ? Math.ceil(digits * charWidth + gutterPadding * 2) : 0;
+        return String(lastLineNumber).length;
+      }));
+      const maxGutterWidth = simpleShowLineNumbers
+        ? Math.ceil(maxDigits * charWidth + GUTTER_PADDING * 2)
+        : 0;
 
+      // Phase 2: Calculate required dimensions for each step
+      const stepDimensions = stepData.map((data) => {
         const requiredWidth = calculateCanvasWidth({
           tokenLines: data.lines,
           charWidth,
           paddingX: previewCfg.paddingX,
-          gutterWidth,
+          gutterWidth: maxGutterWidth,  // Use max gutter width for consistent positioning
           minWidth: 0,  // No minimum for preview - shrink to fit
         });
 
@@ -187,6 +192,7 @@ export default function Home() {
           bg: data.bg,
           theme: getThemeVariant(theme),
           config: cfg,
+          gutterWidthOverride: maxGutterWidth,
         });
 
         nextLayouts.push({
@@ -429,19 +435,23 @@ export default function Home() {
     ctx.font = `${exportCfg.fontSize}px ${exportCfg.fontFamily}`;
     const charWidth = ctx.measureText("M").width;
 
-    // Calculate dimensions for each step using export config
-    const stepDimensions = stepTokenDataRef.current.map((data) => {
+    // Calculate max gutter width across all steps for consistent token positioning
+    const maxDigits = Math.max(...stepTokenDataRef.current.map((data) => {
       const lineCount = data.lines.length;
       const lastLineNumber = data.startLine + Math.max(0, lineCount - 1);
-      const digits = String(lastLineNumber).length;
-      const gutterPadding = data.showLineNumbers ? 16 : 0;
-      const gutterWidth = data.showLineNumbers ? Math.ceil(digits * charWidth + gutterPadding * 2) : 0;
+      return String(lastLineNumber).length;
+    }));
+    const maxGutterWidth = simpleShowLineNumbers
+      ? Math.ceil(maxDigits * charWidth + GUTTER_PADDING * 2)
+      : 0;
 
+    // Calculate dimensions for each step using export config
+    const stepDimensions = stepTokenDataRef.current.map((data) => {
       const requiredWidth = calculateCanvasWidth({
         tokenLines: data.lines,
         charWidth,
         paddingX: exportCfg.paddingX,
-        gutterWidth,
+        gutterWidth: maxGutterWidth,  // Use max gutter width for consistent positioning
         minWidth: 0,
       });
 
@@ -477,6 +487,7 @@ export default function Home() {
         bg: data.bg,
         theme: getThemeVariant(theme),
         config: cfg,
+        gutterWidthOverride: maxGutterWidth,
       });
 
       exportLayouts.push({
