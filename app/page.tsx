@@ -1,14 +1,21 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 
 import { ArrowRight, Wand2, Video, Layers, Play } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GitHubIcon, TwitterIcon } from "@/components/ui/icons";
+import Container from "@/components/container";
 
 export default function Page() {
   return (
-    <div className="relative w-full min-h-full flex flex-col">
+    <Container className="relative w-full min-h-full flex flex-col">
       {/* Background Layer - Grid Pattern */}
       <div className="fixed inset-0 z-0 bg-background bg-[url('/grid-pattern.svg')] dark:bg-[url('/grid-pattern-dark.svg')] bg-center" />
 
@@ -35,8 +42,9 @@ export default function Page() {
               </h1>
 
               <p className="text-xl md:text-2xl lg:text-3xl text-muted-foreground max-w-xl leading-relaxed">
-                Create stunning, cinematic code walkthroughs in seconds. The ultimate free and open
-                source tool for developers, content creators and educators.
+                Create stunning, cinematic code walkthroughs in seconds. The
+                ultimate free and open source tool for developers, content
+                creators and educators.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-start pt-4">
@@ -48,7 +56,10 @@ export default function Page() {
                     Open Editor <ArrowRight className="ml-2 w-5 h-5" />
                   </Button>
                 </Link>
-                <Link href="https://github.com/kostyniuk/mellow-lines" target="_blank">
+                <Link
+                  href="https://github.com/kostyniuk/mellow-lines"
+                  target="_blank"
+                >
                   <Button
                     size="lg"
                     variant="outline"
@@ -128,7 +139,7 @@ export default function Page() {
           </div>
         </div>
       </footer>
-    </div>
+    </Container>
   );
 }
 
@@ -144,11 +155,17 @@ function FeatureCard({
   return (
     <Card className="w-full md:w-[calc(50%-0.5rem)] lg:w-[calc(25%-0.75rem)] bg-card/50 backdrop-blur-xl border border-border hover:border-primary/50 transition-colors duration-300 shadow-sm">
       <CardHeader className="pb-3">
-        <div className="mb-2 p-2 bg-primary/10 rounded-lg w-fit ring-1 ring-primary/20">{icon}</div>
-        <CardTitle className="text-lg font-semibold tracking-tight">{title}</CardTitle>
+        <div className="mb-2 p-2 bg-primary/10 rounded-lg w-fit ring-1 ring-primary/20">
+          {icon}
+        </div>
+        <CardTitle className="text-lg font-semibold tracking-tight">
+          {title}
+        </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
-        <CardDescription className="text-sm leading-relaxed">{description}</CardDescription>
+        <CardDescription className="text-sm leading-relaxed">
+          {description}
+        </CardDescription>
       </CardContent>
     </Card>
   );
