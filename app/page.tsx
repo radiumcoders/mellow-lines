@@ -18,7 +18,7 @@ export default function Page() {
     <div className="relative w-full min-h-screen flex flex-col bg-background">
       {/* Light Rays Background */}
       <ThemedLightRays />
-      
+
       {/* Background gradient similar to Cursor */}
       <div className="fixed inset-0 z-0 bg-gradient-to-br from-background via-background to-background/95" />
       <div className="fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent" />
@@ -38,7 +38,7 @@ export default function Page() {
 
             <h1 className="text-5xl font-pixel-grid sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-foreground leading-[1.1] ">
               Transform Code <br />
-              into Motion
+              into <span className="text-old-primary">Motion</span>
             </h1>
 
             <p className="text-md sm:text-lg lg:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
