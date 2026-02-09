@@ -11,15 +11,17 @@ import {
 import { ArrowRight, Wand2, Video, Layers, Play } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GitHubIcon, TwitterIcon } from "@/components/ui/icons";
-import Container from "@/components/container";
-import { AnimatedHeroText } from "@/components/animated-hero-text";
+import { ThemedLightRays } from "@/components/themed-light-rays";
 
 export default function Page() {
   return (
     <div className="relative w-full min-h-screen flex flex-col bg-background">
+      {/* Light Rays Background */}
+      <ThemedLightRays />
+      
       {/* Background gradient similar to Cursor */}
       <div className="fixed inset-0 z-0 bg-gradient-to-br from-background via-background to-background/95" />
-      <div className="fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent" />
+      <div className="fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent" />
 
       <div className="relative z-10 flex-1 flex flex-col">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 flex flex-col max-w-7xl">
@@ -28,15 +30,15 @@ export default function Page() {
             <div className="flex justify-center">
               <Badge
                 variant="secondary"
-                className="text-xs sm:text-sm px-3 py-1 rounded-full bg-muted/50 border-0"
+                className="text-xs sm:text-sm px-3 py-2 rounded-full bg-muted/50 border border-border"
               >
                 v1.0 Public Beta
               </Badge>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-foreground leading-[1.1] font-sans">
+            <h1 className="text-5xl font-pixel-grid sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-foreground leading-[1.1] ">
               Transform Code <br />
-              into <span className="font-pixel-circle">Motion</span>
+              into Motion
             </h1>
 
             <p className="text-md sm:text-lg lg:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
@@ -48,11 +50,10 @@ export default function Page() {
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center pt-2">
               <Link href="/editor">
                 <Button
-                  size="lg"
-                  className="h-12 sm:h-14 px-6 sm:px-8 text-base sm:text-lg rounded-lg font-medium"
+                  size="sm"
+                  className="h-12 sm:h-14 px-6 sm:px-8 text-base sm:text-lg rounded-xl font-medium"
                 >
-                  Open Editor{" "}
-                  <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
+                  Open Editor
                 </Button>
               </Link>
               <Link
@@ -60,9 +61,9 @@ export default function Page() {
                 target="_blank"
               >
                 <Button
-                  size="lg"
+                  size="sm"
                   variant="outline"
-                  className="h-12 sm:h-14 px-6 sm:px-8 text-base sm:text-lg rounded-lg font-medium border-border/60 hover:bg-muted/50"
+                  className="h-12 sm:h-14 px-6 sm:px-8 text-base sm:text-lg rounded-xl font-medium border-border/60 hover:bg-muted/50"
                 >
                   Star on GitHub
                 </Button>

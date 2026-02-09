@@ -16,7 +16,7 @@ export async function Header() {
             width={24}
             height={24}
           />
-          <h1 className="text-base sm:text-lg font-pixel-square text-foreground hidden sm:block">
+          <h1 className="text-sm xs:text-base sm:text-lg font-pixel-square text-foreground">
             Mellow Lines
           </h1>
         </Link>
