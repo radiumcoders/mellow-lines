@@ -12,83 +12,88 @@ import { ArrowRight, Wand2, Video, Layers, Play } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GitHubIcon, TwitterIcon } from "@/components/ui/icons";
 import Container from "@/components/container";
+import { AnimatedHeroText } from "@/components/animated-hero-text";
 
 export default function Page() {
   return (
-    <Container className="relative w-full min-h-full flex flex-col">
-      {/* Background Layer - Grid Pattern */}
-      <div className="fixed inset-0 z-0 bg-background bg-[url('/grid-pattern.svg')] dark:bg-[url('/grid-pattern-dark.svg')] bg-center" />
+    <div className="relative w-full min-h-screen flex flex-col bg-background">
+      {/* Background gradient similar to Cursor */}
+      <div className="fixed inset-0 z-0 bg-gradient-to-br from-background via-background to-background/95" />
+      <div className="fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent" />
 
-      <div className="relative z-10 flex-1 flex flex-col min-h-0">
-        <div className="container mx-auto px-4 py-8 flex flex-col">
-          <div className="flex flex-col lg:flex-row gap-8 items-center">
-            {/* Hero Text - Left Column */}
-            <div className="text-left space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-1000 flex-1">
-              <div className="flex justify-start">
-                <Badge
-                  variant="secondary"
-                  className="text-sm rounded-full bg-background/50 backdrop-blur-md border border-border"
-                >
-                  ✨ v1.0 Public Beta
-                </Badge>
-              </div>
-
-              <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-foreground drop-shadow-sm leading-[1.1]">
-                Transform Code <br />
-                into{" "}
-                <span className="text-primary inline-block decoration-primary/30 underline decoration-wavy decoration-2 underline-offset-4">
-                  Motion
-                </span>
-              </h1>
-
-              <p className="text-xl md:text-2xl lg:text-3xl text-muted-foreground max-w-xl leading-relaxed">
-                Create stunning, cinematic code walkthroughs in seconds. The
-                ultimate free and open source tool for developers, content
-                creators and educators.
-              </p>
-
-              <div className="flex flex-col sm:flex-row gap-4 justify-start pt-4">
-                <Link href="/editor">
-                  <Button
-                    size="lg"
-                    className="h-14 px-8 text-lg rounded-full shadow-lg shadow-primary/20 transition-transform hover:scale-105"
-                  >
-                    Open Editor <ArrowRight className="ml-2 w-5 h-5" />
-                  </Button>
-                </Link>
-                <Link
-                  href="https://github.com/kostyniuk/mellow-lines"
-                  target="_blank"
-                >
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="h-14 px-8 text-lg rounded-full bg-background/40 backdrop-blur-md border border-border hover:bg-background/60 transition-transform hover:scale-105 hover:text-primary"
-                  >
-                    Star on GitHub
-                  </Button>
-                </Link>
-              </div>
+      <div className="relative z-10 flex-1 flex flex-col">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 flex flex-col max-w-7xl">
+          {/* Hero Text - Centered */}
+          <div className="text-center space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 mx-auto max-w-4xl">
+            <div className="flex justify-center">
+              <Badge
+                variant="secondary"
+                className="text-xs sm:text-sm px-3 py-1 rounded-full bg-muted/50 border-0"
+              >
+                v1.0 Public Beta
+              </Badge>
             </div>
 
-            {/* Hero Video Demo - Right Column */}
-            <div className="w-full lg:flex-1 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-200 fill-mode-backwards">
-              <div className="relative rounded-xl border border-border bg-card/50 dark:bg-white/5 shadow-2xl backdrop-blur-sm overflow-hidden ring-1 ring-black/5 dark:ring-white/20">
-                <div className="absolute inset-0 bg-primary/20 mix-blend-overlay z-10 pointer-events-none" />
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-foreground leading-[1.1] font-sans">
+              Transform Code <br />
+              into <span className="font-pixel-circle">Motion</span>
+            </h1>
+
+            <p className="text-md sm:text-lg lg:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+              Create stunning, cinematic code walkthroughs in seconds. The
+              ultimate free and open source tool for developers, content
+              creators and educators.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center pt-2">
+              <Link href="/editor">
+                <Button
+                  size="lg"
+                  className="h-12 sm:h-14 px-6 sm:px-8 text-base sm:text-lg rounded-lg font-medium"
+                >
+                  Open Editor{" "}
+                  <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
+                </Button>
+              </Link>
+              <Link
+                href="https://github.com/kostyniuk/mellow-lines"
+                target="_blank"
+              >
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-12 sm:h-14 px-6 sm:px-8 text-base sm:text-lg rounded-lg font-medium border-border/60 hover:bg-muted/50"
+                >
+                  Star on GitHub
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          {/* Hero Video Demo - Center Bottom */}
+          <div className="w-full max-w-5xl mx-auto mt-12 sm:mt-16 lg:mt-20 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150 fill-mode-backwards">
+            <div className="relative rounded-xl overflow-hidden shadow-2xl">
+              {/* Shiny border effect */}
+              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/40 via-primary/60 to-primary/40 p-[1px]">
+                <div className="absolute inset-[1px] rounded-xl bg-background" />
+              </div>
+
+              {/* Video container */}
+              <div className="relative rounded-xl overflow-hidden bg-muted/20">
                 <video
                   src="/demo_slow.mp4"
                   autoPlay
                   muted
                   loop
                   playsInline
-                  className="w-full h-auto rounded-xl"
+                  className="w-full h-auto relative z-10"
                 />
               </div>
             </div>
           </div>
 
           {/* Features Preview */}
-          <div className="flex flex-wrap gap-4 mt-12 w-full max-w-6xl animate-in fade-in slide-in-from-bottom-16 duration-1000 delay-300 fill-mode-backwards">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mt-16 sm:mt-20 lg:mt-24 w-full animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300 fill-mode-backwards">
             <FeatureCard
               icon={<Wand2 className="w-5 h-5 text-primary" />}
               title="Magic Transitions"
@@ -114,8 +119,8 @@ export default function Page() {
       </div>
 
       {/* Simple Footer */}
-      <footer className="relative z-10 flex-shrink-0 h-14 flex items-center justify-center text-center text-muted-foreground text-sm bg-background/60 backdrop-blur-xl border-t border-border">
-        <div className="container mx-auto flex items-center justify-center gap-4">
+      <footer className="relative z-10 flex-shrink-0 py-6 sm:py-8 flex items-center justify-center text-center text-muted-foreground text-sm border-t border-border/50">
+        <div className="container mx-auto flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 px-4">
           <p>© 2026 mellowlines. All rights reserved.</p>
           <div className="flex items-center gap-3">
             <a
@@ -139,7 +144,7 @@ export default function Page() {
           </div>
         </div>
       </footer>
-    </Container>
+    </div>
   );
 }
 
@@ -153,12 +158,10 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <Card className="w-full md:w-[calc(50%-0.5rem)] lg:w-[calc(25%-0.75rem)] bg-card/50 backdrop-blur-xl border border-border hover:border-primary/50 transition-colors duration-300 shadow-sm">
+    <Card className="bg-muted/30 border-border/50 hover:border-border transition-all duration-200 shadow-none hover:shadow-md">
       <CardHeader className="pb-3">
-        <div className="mb-2 p-2 bg-primary/10 rounded-lg w-fit ring-1 ring-primary/20">
-          {icon}
-        </div>
-        <CardTitle className="text-lg font-semibold tracking-tight">
+        <div className="mb-2 p-2 bg-primary/10 rounded-md w-fit">{icon}</div>
+        <CardTitle className="text-base sm:text-lg font-semibold">
           {title}
         </CardTitle>
       </CardHeader>
