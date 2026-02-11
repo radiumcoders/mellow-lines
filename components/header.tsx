@@ -7,7 +7,7 @@ import { Separator } from "./ui/separator";
 export async function Header() {
   return (
     <nav className="w-full bg-background border-b border-border px-4 sm:px-6 py-3 sm:py-4 z-[9999] sticky top-0">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      <div className=" mx-auto flex items-center justify-between gap-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 flex-shrink-0">
           <Image
