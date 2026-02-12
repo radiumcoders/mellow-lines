@@ -75,7 +75,7 @@ export function StepsEditorHeader({
   onAddStep,
 }: StepsEditorHeaderProps) {
   return (
-    <div className="flex-none flex items-center justify-between px-4 py-2 border-b bg-background/50 backdrop-blur-sm sticky top-0 z-10 gap-2">
+    <div className="flex-none flex items-center justify-between px-4 py-1.5 border-b bg-background/50 backdrop-blur-sm sticky top-0 z-10 gap-2">
       <div className="flex items-center gap-2">
         <Layers className="w-4 h-4 text-muted-foreground" />
         <FieldLabel className="">Steps</FieldLabel>

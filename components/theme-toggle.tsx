@@ -15,7 +15,12 @@ export function ThemeToggle() {
 
   if (!mounted) {
     return (
-      <Button variant="ghost" size="icon" aria-label="Toggle theme">
+      <Button
+        variant="default"
+        size="icon"
+        aria-label="Toggle theme"
+        className="bg-transparent border border-border rounded"
+      >
         {/* Render an empty span to maintain layout but avoid icon mismatch */}
         <span className="size-5" />
       </Button>
@@ -25,11 +30,12 @@ export function ThemeToggle() {
   return (
     <Button
       variant="ghost"
-      size="icon"
+      size="sm"
       onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
       aria-label="Toggle theme"
+      className="bg-background hover:bg-background p-1 transition-colors text-foreground hover:text-foreground/80"
     >
-      {resolvedTheme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
+      {resolvedTheme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
     </Button>
   );
 }

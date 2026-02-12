@@ -1,5 +1,13 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import {
+  GeistPixelSquare,
+  GeistPixelGrid,
+  GeistPixelCircle,
+  GeistPixelTriangle,
+  GeistPixelLine,
+} from "geist/font/pixel";
+
 import "./globals.css";
 
 import { Header } from "@/components/header";
@@ -31,7 +39,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistMono.variable} ${geistSans.variable} antialiased h-screen flex flex-col`}
+        className={`${geistMono.variable} ${geistSans.variable} ${GeistPixelSquare.variable} ${GeistPixelGrid.variable} ${GeistPixelCircle.variable} ${GeistPixelTriangle.variable} ${GeistPixelLine.variable} antialiased h-screen flex flex-col`}
       >
         <ThemeProvider
           attribute="class"
