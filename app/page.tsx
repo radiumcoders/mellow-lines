@@ -63,7 +63,7 @@ export default function Page() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-12 sm:h-14 px-6 sm:px-8 text-base sm:text-lg rounded-xl font-medium border-border/60 hover:bg-muted/50"
+                  className="h-12 sm:h-14 px-6 sm:px-8 text-base sm:text-lg rounded-xl font-medium border-border/60 hover:bg-muted/50 hover:text-neutral-800 dark:hover:text-white"
                 >
                   Star on GitHub
                 </Button>
