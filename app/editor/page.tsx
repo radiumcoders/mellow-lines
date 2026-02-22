@@ -21,7 +21,7 @@ import {
   type ShikiThemeChoice,
   type TokenLine,
 } from "../lib/magicMove/shikiHighlighter";
-import type { AnimationType, MagicMoveStep, SimpleStep } from "../lib/magicMove/types";
+import type { AnimationType, Step, SimpleStep } from "../lib/magicMove/types";
 import { recordCanvasToWebm } from "../lib/video/recordCanvas";
 import { convertWebmToMp4, terminateFFmpeg } from "../lib/video/converter";
 import { DEFAULT_STEPS } from "../lib/constants";
@@ -201,13 +201,13 @@ export default function Home() {
   const [betweenHoldMs, setBetweenHoldMs] = useState<number>(200);
   const [endHoldMs, setEndHoldMs] = useState<number>(500);
   const [filename, setFilename] = useState<string>("Untitled-1");
-  const [animationType, setAnimationType] = useState<AnimationType>("token-flow");
+  const [animationType, setAnimationType] = useState<AnimationType>("typing");
   const [typingLinesPerSecond, setTypingLinesPerSecond] = useState<number>(1);
   const [naturalFlow, setNaturalFlow] = useState<boolean>(true);
   const previewCharWidthRef = useRef<number>(0);
 
   // Compute steps from simple mode
-  const steps = useMemo<MagicMoveStep[]>(() => {
+  const steps = useMemo<Step[]>(() => {
     return simpleSteps.map((step) => ({
       lang: selectedLang,
       code: step.code,
