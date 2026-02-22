@@ -84,8 +84,8 @@ export function CanvasPreview({
             className="w-fit"
           >
             <TabsList className="bg-transparent rounded-full p-0.5 gap-0.5">
-              <TabsTrigger value="magic-move" className="rounded-full text-xs px-3 py-1 h-auto data-active:bg-background/80 data-active:shadow-sm">
-                Magic Move
+              <TabsTrigger value="token-flow" className="rounded-full text-xs px-3 py-1 h-auto data-active:bg-background/80 data-active:shadow-sm">
+                Token Flow
               </TabsTrigger>
               <TabsTrigger value="typing" className="rounded-full text-xs px-3 py-1 h-auto data-active:bg-background/80 data-active:shadow-sm">
                 Typing

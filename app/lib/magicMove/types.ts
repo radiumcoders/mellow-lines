@@ -14,4 +14,4 @@ export type SimpleStep = {
   code: string;
 };
 
-export type AnimationType = "magic-move" | "typing";
+export type AnimationType = "token-flow" | "typing";

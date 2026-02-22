@@ -201,7 +201,7 @@ export default function Home() {
   const [betweenHoldMs, setBetweenHoldMs] = useState<number>(200);
   const [endHoldMs, setEndHoldMs] = useState<number>(500);
   const [filename, setFilename] = useState<string>("Untitled-1");
-  const [animationType, setAnimationType] = useState<AnimationType>("magic-move");
+  const [animationType, setAnimationType] = useState<AnimationType>("token-flow");
   const [typingLinesPerSecond, setTypingLinesPerSecond] = useState<number>(1);
   const [naturalFlow, setNaturalFlow] = useState<boolean>(true);
   const previewCharWidthRef = useRef<number>(0);
@@ -769,7 +769,7 @@ export default function Home() {
           animationType={animationType}
           onAnimationTypeChange={(type) => {
             setAnimationType(type);
-            if (type === "magic-move" && transitionMs > 5000) setTransitionMs(700);
+            if (type === "token-flow" && transitionMs > 5000) setTransitionMs(700);
           }}
           typingLinesPerSecond={typingLinesPerSecond}
           onTypingLinesPerSecondChange={setTypingLinesPerSecond}
