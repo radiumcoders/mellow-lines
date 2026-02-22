@@ -13,3 +13,5 @@ export type SimpleStep = {
   id: string;
   code: string;
 };
+
+export type AnimationType = "magic-move" | "typing";
