@@ -202,7 +202,7 @@ export default function Home() {
   const [endHoldMs, setEndHoldMs] = useState<number>(500);
   const [filename, setFilename] = useState<string>("Untitled-1");
   const [animationType, setAnimationType] = useState<AnimationType>("magic-move");
-  const [typingLinesPerSecond, setTypingLinesPerSecond] = useState<number>(3);
+  const [typingLinesPerSecond, setTypingLinesPerSecond] = useState<number>(1);
   const [naturalFlow, setNaturalFlow] = useState<boolean>(true);
   const previewCharWidthRef = useRef<number>(0);
 

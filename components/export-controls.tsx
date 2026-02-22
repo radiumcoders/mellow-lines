@@ -57,7 +57,7 @@ export function ExportControls({
         {animationType === "typing" ? (
           <div className="flex items-center gap-2">
             <Label className="text-xs whitespace-nowrap">
-              Speed: {typingLinesPerSecond} lines/s
+              Speed: {typingLinesPerSecond} {typingLinesPerSecond === 1 ? "line" : "lines"}/s
             </Label>
             <Slider
               value={[typingLinesPerSecond]}
