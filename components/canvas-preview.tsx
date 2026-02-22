@@ -77,6 +77,7 @@ export function CanvasPreview({
 
         {/* Floating animation mode pill */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 rounded-full bg-background/60 backdrop-blur-xl shadow-lg ring-1 ring-black/[0.08] dark:ring-white/[0.08] px-1.5 py-1.5">
+          <span className="text-xs text-muted-foreground pl-2 whitespace-nowrap">Animation:</span>
           <Tabs
             value={animationType}
             onValueChange={(v) => onAnimationTypeChange(v as AnimationType)}
