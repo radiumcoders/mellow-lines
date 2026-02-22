@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { AnimationType } from "@/app/lib/magicMove/types";
 
@@ -23,11 +22,8 @@ interface ExportControlsProps {
   canExport: boolean;
   filename: string;
   animationType: AnimationType;
-  onAnimationTypeChange: (value: AnimationType) => void;
   typingLinesPerSecond: number;
   onTypingLinesPerSecondChange: (value: number) => void;
-  naturalFlow: boolean;
-  onNaturalFlowChange: (value: boolean) => void;
 }
 
 export function ExportControls({
@@ -43,11 +39,8 @@ export function ExportControls({
   canExport,
   filename,
   animationType,
-  onAnimationTypeChange,
   typingLinesPerSecond,
   onTypingLinesPerSecondChange,
-  naturalFlow,
-  onNaturalFlowChange,
 }: ExportControlsProps) {
   const [format, setFormat] = useState<"webm" | "mp4">("mp4");
 
@@ -62,31 +55,19 @@ export function ExportControls({
         </div>
 
         {animationType === "typing" ? (
-          <>
-            <div className="flex items-center gap-2">
-              <Label className="text-xs whitespace-nowrap">
-                Speed: {typingLinesPerSecond} lines/s
-              </Label>
-              <Slider
-                value={[typingLinesPerSecond]}
-                min={0.25}
-                max={10}
-                step={0.25}
-                onValueChange={([v]) => onTypingLinesPerSecondChange(v)}
-                className="w-40"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Label htmlFor="natural-flow" className="text-xs whitespace-nowrap">
-                Natural flow
-              </Label>
-              <Switch
-                id="natural-flow"
-                checked={naturalFlow}
-                onCheckedChange={onNaturalFlowChange}
-              />
-            </div>
-          </>
+          <div className="flex items-center gap-2">
+            <Label className="text-xs whitespace-nowrap">
+              Speed: {typingLinesPerSecond} lines/s
+            </Label>
+            <Slider
+              value={[typingLinesPerSecond]}
+              min={0.25}
+              max={10}
+              step={0.25}
+              onValueChange={([v]) => onTypingLinesPerSecondChange(v)}
+              className="w-40"
+            />
+          </div>
         ) : (
           <div className="flex items-center gap-2">
             <Label className="text-xs whitespace-nowrap">
@@ -102,20 +83,6 @@ export function ExportControls({
             />
           </div>
         )}
-
-        <div className="flex items-center gap-2">
-          <Label className="text-xs whitespace-nowrap">Animation:</Label>
-          <Tabs
-            value={animationType}
-            onValueChange={(v) => onAnimationTypeChange(v as AnimationType)}
-            className="w-fit"
-          >
-            <TabsList>
-              <TabsTrigger value="magic-move">Magic Move</TabsTrigger>
-              <TabsTrigger value="typing">Typing</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
       </div>
 
       <div className="flex items-center gap-2">

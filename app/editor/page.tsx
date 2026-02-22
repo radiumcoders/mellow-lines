@@ -203,7 +203,7 @@ export default function Home() {
   const [filename, setFilename] = useState<string>("Untitled-1");
   const [animationType, setAnimationType] = useState<AnimationType>("magic-move");
   const [typingLinesPerSecond, setTypingLinesPerSecond] = useState<number>(3);
-  const [naturalFlow, setSmartPauses] = useState<boolean>(true);
+  const [naturalFlow, setNaturalFlow] = useState<boolean>(true);
   const previewCharWidthRef = useRef<number>(0);
 
   // Compute steps from simple mode
@@ -774,7 +774,7 @@ export default function Home() {
           typingLinesPerSecond={typingLinesPerSecond}
           onTypingLinesPerSecondChange={setTypingLinesPerSecond}
           naturalFlow={naturalFlow}
-          onNaturalFlowChange={setSmartPauses}
+          onNaturalFlowChange={setNaturalFlow}
         />
       </ResizablePanelGroup>
     </div>

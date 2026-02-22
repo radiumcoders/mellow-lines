@@ -78,6 +78,10 @@ export function PreviewPanel({
         isLoading={!stepLayouts}
         filename={filename}
         onFilenameChange={onFilenameChange}
+        animationType={animationType}
+        onAnimationTypeChange={onAnimationTypeChange}
+        naturalFlow={naturalFlow}
+        onNaturalFlowChange={onNaturalFlowChange}
       />
 
       <PlayerControls
@@ -103,11 +107,8 @@ export function PreviewPanel({
         canExport={canExport}
         filename={filename}
         animationType={animationType}
-        onAnimationTypeChange={onAnimationTypeChange}
         typingLinesPerSecond={typingLinesPerSecond}
         onTypingLinesPerSecondChange={onTypingLinesPerSecondChange}
-        naturalFlow={naturalFlow}
-        onNaturalFlowChange={onNaturalFlowChange}
       />
     </ResizablePanel>
   );
