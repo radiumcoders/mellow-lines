@@ -5,7 +5,7 @@ import { nanoid } from "nanoid";
 
 import { animateLayouts } from "../lib/magicMove/animate";
 import { drawCodeFrame } from "../lib/magicMove/canvasRenderer";
-import { animateTyping, computeChangedLines } from "../lib/typing/animateTyping";
+import { animateTyping, computeChangedChars } from "../lib/typing/animateTyping";
 import {
   calculateCanvasHeight,
   calculateCanvasWidth,
@@ -202,7 +202,7 @@ export default function Home() {
   const [endHoldMs, setEndHoldMs] = useState<number>(500);
   const [filename, setFilename] = useState<string>("Untitled-1");
   const [animationType, setAnimationType] = useState<AnimationType>("typing");
-  const [typingLinesPerSecond, setTypingLinesPerSecond] = useState<number>(1);
+  const [typingWpm, setTypingWpm] = useState<number>(120);
   const [naturalFlow, setNaturalFlow] = useState<boolean>(true);
   const previewCharWidthRef = useRef<number>(0);
 
@@ -255,15 +255,15 @@ export default function Home() {
     return codes;
   }, [steps, animationType]);
 
-  // Per-transition durations for typing mode (based on lines/second)
+  // Per-transition durations for typing mode (based on WPM)
   const typingTransitionDurations = useMemo(() => {
     if (animationType !== "typing" || effectiveStepCodes.length <= 1) return null;
     return effectiveStepCodes.slice(0, -1).map((fromCode, i) => {
       const toCode = effectiveStepCodes[i + 1];
-      const lines = computeChangedLines(fromCode, toCode);
-      return Math.max(500, (lines / typingLinesPerSecond) * 1000);
+      const chars = computeChangedChars(fromCode, toCode);
+      return Math.max(500, (chars / 5 / typingWpm) * 60 * 1000);
     });
-  }, [animationType, effectiveStepCodes, typingLinesPerSecond]);
+  }, [animationType, effectiveStepCodes, typingWpm]);
 
   const timeline = useMemo(() => {
     const stepCount = effectiveStepCount;
@@ -414,7 +414,7 @@ export default function Home() {
       URL.revokeObjectURL(downloadUrl);
       setDownloadUrl(null);
     }
-  }, [steps, theme, fps, transitionMs, startHoldMs, betweenHoldMs, endHoldMs, animationType, typingLinesPerSecond, naturalFlow]); // Only those that affect the video content
+  }, [steps, theme, fps, transitionMs, startHoldMs, betweenHoldMs, endHoldMs, animationType, typingWpm, naturalFlow]); // Only those that affect the video content
 
   const renderAt = useCallback(
     (ms: number, overrideDimensions?: CanvasDimensions) => {
@@ -630,8 +630,8 @@ export default function Home() {
     const exportTypingDurations = animationType === "typing"
       ? exportStepCodes.slice(0, -1).map((fromCode, i) => {
           const toCode = exportStepCodes[i + 1];
-          const lines = computeChangedLines(fromCode, toCode);
-          return Math.max(500, (lines / typingLinesPerSecond) * 1000);
+          const chars = computeChangedChars(fromCode, toCode);
+          return Math.max(500, (chars / 5 / typingWpm) * 60 * 1000);
         })
       : null;
 
@@ -771,8 +771,8 @@ export default function Home() {
             setAnimationType(type);
             if (type === "token-flow" && transitionMs > 5000) setTransitionMs(700);
           }}
-          typingLinesPerSecond={typingLinesPerSecond}
-          onTypingLinesPerSecondChange={setTypingLinesPerSecond}
+          typingWpm={typingWpm}
+          onTypingWpmChange={setTypingWpm}
           naturalFlow={naturalFlow}
           onNaturalFlowChange={setNaturalFlow}
         />

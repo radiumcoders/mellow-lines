@@ -30,8 +30,8 @@ interface PreviewPanelProps {
   onFilenameChange: (value: string) => void;
   animationType: AnimationType;
   onAnimationTypeChange: (value: AnimationType) => void;
-  typingLinesPerSecond: number;
-  onTypingLinesPerSecondChange: (value: number) => void;
+  typingWpm: number;
+  onTypingWpmChange: (value: number) => void;
   naturalFlow: boolean;
   onNaturalFlowChange: (value: boolean) => void;
 }
@@ -60,8 +60,8 @@ export function PreviewPanel({
   onFilenameChange,
   animationType,
   onAnimationTypeChange,
-  typingLinesPerSecond,
-  onTypingLinesPerSecondChange,
+  typingWpm,
+  onTypingWpmChange,
   naturalFlow,
   onNaturalFlowChange,
 }: PreviewPanelProps) {
@@ -107,8 +107,8 @@ export function PreviewPanel({
         canExport={canExport}
         filename={filename}
         animationType={animationType}
-        typingLinesPerSecond={typingLinesPerSecond}
-        onTypingLinesPerSecondChange={onTypingLinesPerSecondChange}
+        typingWpm={typingWpm}
+        onTypingWpmChange={onTypingWpmChange}
       />
     </ResizablePanel>
   );

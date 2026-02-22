@@ -22,8 +22,8 @@ interface ExportControlsProps {
   canExport: boolean;
   filename: string;
   animationType: AnimationType;
-  typingLinesPerSecond: number;
-  onTypingLinesPerSecondChange: (value: number) => void;
+  typingWpm: number;
+  onTypingWpmChange: (value: number) => void;
 }
 
 export function ExportControls({
@@ -39,8 +39,8 @@ export function ExportControls({
   canExport,
   filename,
   animationType,
-  typingLinesPerSecond,
-  onTypingLinesPerSecondChange,
+  typingWpm,
+  onTypingWpmChange,
 }: ExportControlsProps) {
   const [format, setFormat] = useState<"webm" | "mp4">("mp4");
 
@@ -57,14 +57,14 @@ export function ExportControls({
         {animationType === "typing" ? (
           <div className="flex items-center gap-2">
             <Label className="text-xs whitespace-nowrap">
-              Speed: {typingLinesPerSecond} {typingLinesPerSecond === 1 ? "line" : "lines"}/s
+              Speed: {typingWpm} WPM
             </Label>
             <Slider
-              value={[typingLinesPerSecond]}
-              min={0.25}
-              max={10}
-              step={0.25}
-              onValueChange={([v]) => onTypingLinesPerSecondChange(v)}
+              value={[typingWpm]}
+              min={30}
+              max={600}
+              step={10}
+              onValueChange={([v]) => onTypingWpmChange(v)}
               className="w-40"
             />
           </div>
