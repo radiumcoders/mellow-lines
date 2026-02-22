@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { AnimationType } from "@/app/lib/magicMove/types";
 
@@ -25,6 +26,8 @@ interface ExportControlsProps {
   onAnimationTypeChange: (value: AnimationType) => void;
   typingLinesPerSecond: number;
   onTypingLinesPerSecondChange: (value: number) => void;
+  naturalFlow: boolean;
+  onNaturalFlowChange: (value: boolean) => void;
 }
 
 export function ExportControls({
@@ -43,6 +46,8 @@ export function ExportControls({
   onAnimationTypeChange,
   typingLinesPerSecond,
   onTypingLinesPerSecondChange,
+  naturalFlow,
+  onNaturalFlowChange,
 }: ExportControlsProps) {
   const [format, setFormat] = useState<"webm" | "mp4">("mp4");
 
@@ -57,19 +62,31 @@ export function ExportControls({
         </div>
 
         {animationType === "typing" ? (
-          <div className="flex items-center gap-2">
-            <Label className="text-xs whitespace-nowrap">
-              Speed: {typingLinesPerSecond} lines/s
-            </Label>
-            <Slider
-              value={[typingLinesPerSecond]}
-              min={0.25}
-              max={10}
-              step={0.25}
-              onValueChange={([v]) => onTypingLinesPerSecondChange(v)}
-              className="w-40"
-            />
-          </div>
+          <>
+            <div className="flex items-center gap-2">
+              <Label className="text-xs whitespace-nowrap">
+                Speed: {typingLinesPerSecond} lines/s
+              </Label>
+              <Slider
+                value={[typingLinesPerSecond]}
+                min={0.25}
+                max={10}
+                step={0.25}
+                onValueChange={([v]) => onTypingLinesPerSecondChange(v)}
+                className="w-40"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="natural-flow" className="text-xs whitespace-nowrap">
+                Natural flow
+              </Label>
+              <Switch
+                id="natural-flow"
+                checked={naturalFlow}
+                onCheckedChange={onNaturalFlowChange}
+              />
+            </div>
+          </>
         ) : (
           <div className="flex items-center gap-2">
             <Label className="text-xs whitespace-nowrap">

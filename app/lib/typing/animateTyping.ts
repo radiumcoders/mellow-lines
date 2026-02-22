@@ -1,4 +1,5 @@
 import type { LaidToken, LayoutResult } from "../magicMove/codeLayout";
+import { computeCharWeights, totalWeight, charsForWeightedProgress } from "./smartWeights";
 
 type AnimatedToken = {
   content: string;
@@ -169,6 +170,19 @@ function getCachedDiff(fromCode: string, toCode: string): DiffOp[] {
   return cachedDiffResult;
 }
 
+// ── Weight memoization cache ─────────────────────────────────────────
+
+let cachedWeightsKey = "";
+let cachedWeightsResult: number[] = [];
+
+function getCachedWeights(code: string): number[] {
+  if (code !== cachedWeightsKey) {
+    cachedWeightsKey = code;
+    cachedWeightsResult = computeCharWeights(code);
+  }
+  return cachedWeightsResult;
+}
+
 // ── Constants ─────────────────────────────────────────────────────────
 
 // Deletions are weighted less so they happen faster than insertions.
@@ -202,6 +216,7 @@ export function animateTyping(opts: {
   paddingX: number;
   paddingY: number;
   gutterWidth: number;
+  naturalFlow?: boolean;
 }): TypingResult {
   // Use linear progress for typing — constant typing speed feels more natural
   const p = Math.max(0, Math.min(1, opts.progress));
@@ -219,10 +234,18 @@ function typeFromScratch(
   to: LayoutResult,
   toCode: string,
   progress: number,
-  opts: { charWidth: number; lineHeight: number; paddingY: number; paddingX: number; gutterWidth: number },
+  opts: { charWidth: number; lineHeight: number; paddingY: number; paddingX: number; gutterWidth: number; naturalFlow?: boolean },
 ): TypingResult {
   const totalChars = toCode.length;
-  const revealCount = Math.floor(progress * totalChars);
+  let revealCount: number;
+
+  if (opts.naturalFlow) {
+    const weights = getCachedWeights(toCode);
+    const tw = totalWeight(weights);
+    revealCount = charsForWeightedProgress(weights, progress * tw);
+  } else {
+    revealCount = Math.floor(progress * totalChars);
+  }
 
   // Walk tokens in order, revealing characters
   const tokens: AnimatedToken[] = [];
@@ -300,7 +323,7 @@ function typeDiff(
   fromCode: string,
   toCode: string,
   progress: number,
-  opts: { charWidth: number; lineHeight: number; paddingY: number; paddingX: number; gutterWidth: number },
+  opts: { charWidth: number; lineHeight: number; paddingY: number; paddingX: number; gutterWidth: number; naturalFlow?: boolean },
 ): TypingResult {
   const ops = getCachedDiff(fromCode, toCode);
   const fromLines = fromCode.split("\n");
@@ -309,11 +332,27 @@ function typeDiff(
   const fromTokensByLine = groupTokensByLine(from.tokens, opts.paddingY, opts.lineHeight);
   const toTokensByLine = groupTokensByLine(to.tokens, opts.paddingY, opts.lineHeight);
 
+  // Pre-compute per-line weights for inserts when naturalFlow is enabled
+  const lineWeightsMap = new Map<number, number[]>();
+  if (opts.naturalFlow) {
+    for (const op of ops) {
+      if (op.type === "insert") {
+        lineWeightsMap.set(op.toLine, computeCharWeights(toLines[op.toLine]));
+      }
+    }
+  }
+
   // Count weighted total across all ops in document order
   let totalWeighted = 0;
   for (const op of ops) {
     if (op.type === "delete") totalWeighted += fromLines[op.fromLine].length * DELETE_WEIGHT;
-    if (op.type === "insert") totalWeighted += toLines[op.toLine].length;
+    if (op.type === "insert") {
+      if (opts.naturalFlow) {
+        totalWeighted += totalWeight(lineWeightsMap.get(op.toLine)!);
+      } else {
+        totalWeighted += toLines[op.toLine].length;
+      }
+    }
   }
 
   // If no changes, just show the "to" state
@@ -366,9 +405,9 @@ function typeDiff(
         weightedSoFar = processedWeighted;
       }
     } else if (op.type === "insert") {
-      const lineChars = toLines[op.toLine].length;
-      const lineCost = lineChars; // weight 1.0 for insertions
       const lineTokens = toTokensByLine.get(op.toLine) ?? [];
+      const lw = opts.naturalFlow ? lineWeightsMap.get(op.toLine) : undefined;
+      const lineCost = lw ? totalWeight(lw) : toLines[op.toLine].length;
 
       if (weightedSoFar + lineCost <= processedWeighted) {
         // Fully inserted — show full line
@@ -378,7 +417,10 @@ function typeDiff(
         // Not reached yet — don't show
       } else {
         // Partially inserted
-        const charsInserted = Math.floor(processedWeighted - weightedSoFar);
+        const weightRemaining = processedWeighted - weightedSoFar;
+        const charsInserted = lw
+          ? charsForWeightedProgress(lw, weightRemaining)
+          : Math.floor(weightRemaining);
         visibleLines.push({ tokens: lineTokens, source: "to", partialReveal: charsInserted });
         weightedSoFar = processedWeighted;
       }

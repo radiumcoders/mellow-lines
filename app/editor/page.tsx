@@ -79,10 +79,11 @@ function renderTimeline(opts: {
   transitionMs: number;
   typingDurations: number[] | null;
   title?: string;
+  naturalFlow?: boolean;
 }): void {
   const {
     ctx, config, layouts, codes, timeline, ms, themeVariant,
-    charWidth, isTyping, transitionMs, typingDurations, title,
+    charWidth, isTyping, transitionMs, typingDurations, title, naturalFlow,
   } = opts;
 
   const clampMs = Math.max(0, Math.min(timeline.totalMs, ms));
@@ -144,6 +145,7 @@ function renderTimeline(opts: {
           paddingX: config.paddingX,
           paddingY: config.paddingY,
           gutterWidth,
+          naturalFlow,
         });
         drawCodeFrame({
           ctx, config, layout: b.layout, theme: themeVariant,
@@ -201,6 +203,7 @@ export default function Home() {
   const [filename, setFilename] = useState<string>("Untitled-1");
   const [animationType, setAnimationType] = useState<AnimationType>("magic-move");
   const [typingLinesPerSecond, setTypingLinesPerSecond] = useState<number>(3);
+  const [naturalFlow, setSmartPauses] = useState<boolean>(true);
   const previewCharWidthRef = useRef<number>(0);
 
   // Compute steps from simple mode
@@ -411,7 +414,7 @@ export default function Home() {
       URL.revokeObjectURL(downloadUrl);
       setDownloadUrl(null);
     }
-  }, [steps, theme, fps, transitionMs, startHoldMs, betweenHoldMs, endHoldMs, animationType, typingLinesPerSecond]); // Only those that affect the video content
+  }, [steps, theme, fps, transitionMs, startHoldMs, betweenHoldMs, endHoldMs, animationType, typingLinesPerSecond, naturalFlow]); // Only those that affect the video content
 
   const renderAt = useCallback(
     (ms: number, overrideDimensions?: CanvasDimensions) => {
@@ -447,9 +450,10 @@ export default function Home() {
         isTyping: animationType === "typing",
         transitionMs,
         typingDurations: typingTransitionDurations,
+        naturalFlow,
       });
     },
-    [effectiveStepLayouts, effectiveStepCodes, animationType, theme, timeline, transitionMs, typingTransitionDurations, canvasDimensions],
+    [effectiveStepLayouts, effectiveStepCodes, animationType, theme, timeline, transitionMs, typingTransitionDurations, canvasDimensions, naturalFlow],
   );
 
   useEffect(() => {
@@ -649,6 +653,7 @@ export default function Home() {
         transitionMs,
         typingDurations: exportTypingDurations,
         title: filename,
+        naturalFlow,
       });
     };
 
@@ -768,6 +773,8 @@ export default function Home() {
           }}
           typingLinesPerSecond={typingLinesPerSecond}
           onTypingLinesPerSecondChange={setTypingLinesPerSecond}
+          naturalFlow={naturalFlow}
+          onNaturalFlowChange={setSmartPauses}
         />
       </ResizablePanelGroup>
     </div>

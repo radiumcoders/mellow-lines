@@ -32,6 +32,8 @@ interface PreviewPanelProps {
   onAnimationTypeChange: (value: AnimationType) => void;
   typingLinesPerSecond: number;
   onTypingLinesPerSecondChange: (value: number) => void;
+  naturalFlow: boolean;
+  onNaturalFlowChange: (value: boolean) => void;
 }
 
 export function PreviewPanel({
@@ -60,6 +62,8 @@ export function PreviewPanel({
   onAnimationTypeChange,
   typingLinesPerSecond,
   onTypingLinesPerSecondChange,
+  naturalFlow,
+  onNaturalFlowChange,
 }: PreviewPanelProps) {
   return (
     <ResizablePanel
@@ -102,6 +106,8 @@ export function PreviewPanel({
         onAnimationTypeChange={onAnimationTypeChange}
         typingLinesPerSecond={typingLinesPerSecond}
         onTypingLinesPerSecondChange={onTypingLinesPerSecondChange}
+        naturalFlow={naturalFlow}
+        onNaturalFlowChange={onNaturalFlowChange}
       />
     </ResizablePanel>
   );
