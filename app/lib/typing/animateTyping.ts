@@ -189,16 +189,24 @@ function getCachedWeights(code: string): number[] {
 // A weight of 0.3 means deleting a line takes ~1/3 the time of typing one.
 export const DELETE_WEIGHT = 0.3;
 
-// ── Changed line count (for computing per-transition duration) ────────
+// ── Changed character count (for computing per-transition duration) ───
 
-export function computeChangedLines(fromCode: string, toCode: string): number {
-  if (fromCode === "") return toCode.split("\n").length;
-  if (toCode === "") return fromCode.split("\n").length * DELETE_WEIGHT;
+export function computeChangedChars(fromCode: string, toCode: string): number {
+  if (fromCode === "") {
+    return toCode.split("\n").reduce((sum, line) => sum + (line.trim().length > 0 ? line.length : 0), 0) || 1;
+  }
+  if (toCode === "") {
+    return fromCode.split("\n").reduce((sum, line) => sum + (line.trim().length > 0 ? line.length * DELETE_WEIGHT : 0), 0) || 1;
+  }
   const ops = getCachedDiff(fromCode, toCode);
+  const fromLines = fromCode.split("\n");
+  const toLines = toCode.split("\n");
   let count = 0;
   for (const op of ops) {
-    if (op.type === "delete") count += DELETE_WEIGHT;
-    if (op.type === "insert") count += 1;
+    if (op.type === "delete" && fromLines[op.fromLine].trim().length > 0)
+      count += fromLines[op.fromLine].length * DELETE_WEIGHT;
+    if (op.type === "insert" && toLines[op.toLine].trim().length > 0)
+      count += toLines[op.toLine].length;
   }
   return Math.max(1, count);
 }
