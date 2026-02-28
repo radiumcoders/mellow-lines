@@ -3,6 +3,10 @@
 import { useRef } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { AnimationType } from "@/app/lib/magicMove/types";
 import type { RenderTheme } from "@/app/lib/magicMove/codeLayout";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +17,10 @@ interface CanvasPreviewProps {
   isLoading?: boolean;
   filename: string;
   onFilenameChange: (value: string) => void;
+  animationType: AnimationType;
+  onAnimationTypeChange: (value: AnimationType) => void;
+  naturalFlow: boolean;
+  onNaturalFlowChange: (value: boolean) => void;
   themeVariant: RenderTheme;
 }
 
@@ -23,6 +31,10 @@ export function CanvasPreview({
   isLoading,
   filename,
   onFilenameChange,
+  animationType,
+  onAnimationTypeChange,
+  naturalFlow,
+  onNaturalFlowChange,
   themeVariant,
 }: CanvasPreviewProps) {
   const hasShownRef = useRef(false);
@@ -48,7 +60,7 @@ export function CanvasPreview({
         </div>
       )}
 
-      <div className="flex-1 overflow-auto flex items-center justify-center p-8 bg-[url('/grid-pattern.svg')] dark:bg-[url('/grid-pattern-dark.svg')] bg-center">
+      <div className="flex-1 overflow-auto relative flex items-center justify-center p-8 bg-[url('/grid-pattern.svg')] dark:bg-[url('/grid-pattern-dark.svg')] bg-center">
         {!isLoading && (
           <div
             className={`relative shadow-2xl rounded-lg overflow-hidden ring-1 ring-black/5 dark:ring-white/10 bg-zinc-950 ${shouldAnimate ? "opacity-0 animate-[fadeIn_0.3s_ease-in-out_forwards]" : "opacity-100"}`}
@@ -71,6 +83,41 @@ export function CanvasPreview({
             </div>
           </div>
         )}
+
+        {/* Floating animation mode pill */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 rounded-full bg-background/60 backdrop-blur-xl shadow-lg ring-1 ring-black/[0.08] dark:ring-white/[0.08] px-1.5 py-1.5">
+          <span className="text-xs text-muted-foreground pl-2 whitespace-nowrap">Animation:</span>
+          <Tabs
+            value={animationType}
+            onValueChange={(v) => onAnimationTypeChange(v as AnimationType)}
+            className="w-fit"
+          >
+            <TabsList className="bg-transparent rounded-full p-0.5 gap-0.5">
+              <TabsTrigger value="typing" className="rounded-full text-xs px-3 py-1 h-auto data-active:bg-background/80 data-active:shadow-sm">
+                Typing
+              </TabsTrigger>
+              <TabsTrigger value="token-flow" className="rounded-full text-xs px-3 py-1 h-auto data-active:bg-background/80 data-active:shadow-sm">
+                Token Flow
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {animationType === "typing" && (
+            <>
+              <div className="w-px h-4 bg-border/50" />
+              <div className="flex items-center gap-1.5 pr-1">
+                <Label htmlFor="natural-flow-pill" className="text-xs whitespace-nowrap text-muted-foreground">
+                  Natural flow
+                </Label>
+                <Switch
+                  id="natural-flow-pill"
+                  checked={naturalFlow}
+                  onCheckedChange={onNaturalFlowChange}
+                />
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

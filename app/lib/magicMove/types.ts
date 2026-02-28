@@ -1,15 +1,17 @@
-export type MagicMoveStepMeta = {
+export type StepMeta = {
   lines: boolean;
   startLine: number;
 };
 
-export type MagicMoveStep = {
+export type Step = {
   lang: string;
   code: string;
-  meta: MagicMoveStepMeta;
+  meta: StepMeta;
 };
 
 export type SimpleStep = {
   id: string;
   code: string;
 };
+
+export type AnimationType = "typing" | "token-flow";

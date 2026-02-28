@@ -4,6 +4,7 @@ import { ResizablePanel } from "@/components/ui/resizable";
 import { CanvasPreview } from "./canvas-preview";
 import { PlayerControls } from "./player-controls";
 import { ExportControls } from "./export-controls";
+import type { AnimationType } from "@/app/lib/magicMove/types";
 import type { RenderTheme } from "@/app/lib/magicMove/codeLayout";
 
 interface PreviewPanelProps {
@@ -28,6 +29,12 @@ interface PreviewPanelProps {
   canExport: boolean;
   filename: string;
   onFilenameChange: (value: string) => void;
+  animationType: AnimationType;
+  onAnimationTypeChange: (value: AnimationType) => void;
+  typingWpm: number;
+  onTypingWpmChange: (value: number) => void;
+  naturalFlow: boolean;
+  onNaturalFlowChange: (value: boolean) => void;
   themeVariant: RenderTheme;
 }
 
@@ -53,6 +60,12 @@ export function PreviewPanel({
   canExport,
   filename,
   onFilenameChange,
+  animationType,
+  onAnimationTypeChange,
+  typingWpm,
+  onTypingWpmChange,
+  naturalFlow,
+  onNaturalFlowChange,
   themeVariant,
 }: PreviewPanelProps) {
   return (
@@ -68,6 +81,10 @@ export function PreviewPanel({
         isLoading={!stepLayouts}
         filename={filename}
         onFilenameChange={onFilenameChange}
+        animationType={animationType}
+        onAnimationTypeChange={onAnimationTypeChange}
+        naturalFlow={naturalFlow}
+        onNaturalFlowChange={onNaturalFlowChange}
         themeVariant={themeVariant}
       />
 
@@ -93,6 +110,9 @@ export function PreviewPanel({
         onExport={onExport}
         canExport={canExport}
         filename={filename}
+        animationType={animationType}
+        typingWpm={typingWpm}
+        onTypingWpmChange={onTypingWpmChange}
       />
     </ResizablePanel>
   );
