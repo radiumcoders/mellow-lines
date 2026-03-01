@@ -16,6 +16,7 @@ import {
   makePreviewLayoutConfig,
 } from "../lib/magicMove/codeLayout";
 import type { CanvasLayoutConfig, LayoutResult, RenderTheme } from "../lib/magicMove/codeLayout";
+import { getBackgroundThemeById, type BackgroundTheme } from "../lib/magicMove/backgroundThemes";
 import {
   getThemeVariant,
   shikiTokenizeToLines,
@@ -83,10 +84,12 @@ function renderTimeline(opts: {
   typingDurations: number[] | null;
   title?: string;
   naturalFlow?: boolean;
+  backgroundTheme?: BackgroundTheme | null;
 }): void {
   const {
     ctx, config, layouts, codes, timeline, ms, themeVariant,
     charWidth, isTyping, transitionMs, typingDurations, title, naturalFlow,
+    backgroundTheme,
   } = opts;
 
   const clampMs = Math.max(0, Math.min(timeline.totalMs, ms));
@@ -112,6 +115,7 @@ function renderTimeline(opts: {
       ctx, config, layout: only.layout, theme: themeVariant,
       showLineNumbers: only.showLineNumbers, startLine: only.startLine,
       lineCount: only.tokenLineCount, title, cursor: getBlinkCursor(only.layout),
+      backgroundTheme,
     });
     return;
   }
@@ -123,6 +127,7 @@ function renderTimeline(opts: {
       ctx, config, layout: first.layout, theme: themeVariant,
       showLineNumbers: first.showLineNumbers, startLine: first.startLine,
       lineCount: first.tokenLineCount, title, cursor: getBlinkCursor(first.layout),
+      backgroundTheme,
     });
     return;
   }
@@ -155,6 +160,7 @@ function renderTimeline(opts: {
           tokens: result.tokens, showLineNumbers: b.showLineNumbers,
           startLine: b.startLine, lineCount: result.visibleLineCount, title,
           cursor: result.cursor ? { ...result.cursor, color: b.layout.fg } : undefined,
+          backgroundTheme,
         });
       } else {
         const animated = animateLayouts({ from: a.layout, to: b.layout, progress });
@@ -165,7 +171,7 @@ function renderTimeline(opts: {
           startLine: b.startLine,
           lineCount: Math.max(a.tokenLineCount, b.tokenLineCount),
           prevLineCount: a.tokenLineCount, targetLineCount: b.tokenLineCount,
-          transitionProgress: progress, title,
+          transitionProgress: progress, title, backgroundTheme,
         });
       }
       return;
@@ -177,6 +183,7 @@ function renderTimeline(opts: {
         ctx, config, layout: b.layout, theme: themeVariant,
         showLineNumbers: b.showLineNumbers, startLine: b.startLine,
         lineCount: b.tokenLineCount, title, cursor: getBlinkCursor(b.layout),
+        backgroundTheme,
       });
       return;
     }
@@ -188,6 +195,7 @@ function renderTimeline(opts: {
     ctx, config, layout: last.layout, theme: themeVariant,
     showLineNumbers: last.showLineNumbers, startLine: last.startLine,
     lineCount: last.tokenLineCount, title, cursor: getBlinkCursor(last.layout),
+    backgroundTheme,
   });
 }
 
@@ -209,7 +217,15 @@ export default function Home() {
   const [typingWpm, setTypingWpm] = useState<number>(120);
   const [naturalFlow, setNaturalFlow] = useState<boolean>(true);
   const [soundEnabled, setSoundEnabled] = useState(false);
+  const [backgroundThemeId, setBackgroundThemeId] = useState<string>("none");
   const previewCharWidthRef = useRef<number>(0);
+
+  const PREVIEW_BG_PADDING = 48;
+  const EXPORT_BG_PADDING = 80;
+
+  const activeBackgroundTheme = backgroundThemeId !== "none"
+    ? getBackgroundThemeById(backgroundThemeId) ?? null
+    : null;
 
   // Compute steps from simple mode
   const steps = useMemo<Step[]>(() => {
@@ -392,7 +408,13 @@ export default function Home() {
 
       if (cancelled) return;
       previewCharWidthRef.current = charWidth;
-      setCanvasDimensions({ width: maxWidth, height: maxHeight });
+
+      // Apply background padding to total canvas dimensions
+      const bgPad = backgroundThemeId !== "none" ? PREVIEW_BG_PADDING : 0;
+      setCanvasDimensions({
+        width: maxWidth + bgPad * 2,
+        height: maxHeight + bgPad * 2,
+      });
       setStepLayouts(nextLayouts);
       // Store tokenized data for potential use in export
       stepTokenDataRef.current = stepData;
@@ -404,7 +426,7 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [steps, theme]);
+  }, [steps, theme, backgroundThemeId]);
 
   // For typing mode: prepend a virtual empty step so the first transition types from scratch
   const effectiveStepLayouts = useMemo(() => {
@@ -419,7 +441,7 @@ export default function Home() {
       URL.revokeObjectURL(downloadUrl);
       setDownloadUrl(null);
     }
-  }, [steps, theme, fps, transitionMs, startHoldMs, betweenHoldMs, endHoldMs, animationType, typingWpm, naturalFlow]); // Only those that affect the video content
+  }, [steps, theme, fps, transitionMs, startHoldMs, betweenHoldMs, endHoldMs, animationType, typingWpm, naturalFlow, backgroundThemeId]); // Only those that affect the video content
 
   const renderAt = useCallback(
     (ms: number, overrideDimensions?: CanvasDimensions) => {
@@ -430,11 +452,15 @@ export default function Home() {
 
       const dims = overrideDimensions ?? canvasDimensions;
       const PIXEL_RATIO = 2;
+      const bgPad = activeBackgroundTheme ? PREVIEW_BG_PADDING : 0;
 
       const cfg = makePreviewLayoutConfig();
-      cfg.canvasWidth = dims.width;
-      cfg.canvasHeight = dims.height;
+      // canvasWidth/Height = card dimensions (without background padding)
+      cfg.canvasWidth = dims.width - bgPad * 2;
+      cfg.canvasHeight = dims.height - bgPad * 2;
+      cfg.backgroundPadding = bgPad;
 
+      // Total canvas element size includes background padding
       const targetWidth = dims.width * PIXEL_RATIO;
       const targetHeight = dims.height * PIXEL_RATIO;
       canvas.width = targetWidth;
@@ -456,9 +482,10 @@ export default function Home() {
         transitionMs,
         typingDurations: typingTransitionDurations,
         naturalFlow,
+        backgroundTheme: activeBackgroundTheme,
       });
     },
-    [effectiveStepLayouts, effectiveStepCodes, animationType, theme, timeline, transitionMs, typingTransitionDurations, canvasDimensions, naturalFlow],
+    [effectiveStepLayouts, effectiveStepCodes, animationType, theme, timeline, transitionMs, typingTransitionDurations, canvasDimensions, naturalFlow, activeBackgroundTheme],
   );
 
   useEffect(() => {
@@ -596,18 +623,24 @@ export default function Home() {
     });
 
     // Get max dimensions across all steps
-    const rawWidth = Math.max(...stepDimensions.map((d) => d.width));
-    const rawHeight = Math.max(...stepDimensions.map((d) => d.height));
+    const rawCardWidth = Math.max(...stepDimensions.map((d) => d.width));
+    const rawCardHeight = Math.max(...stepDimensions.map((d) => d.height));
+    const exportBgPad = activeBackgroundTheme ? EXPORT_BG_PADDING : 0;
+    const rawWidth = rawCardWidth + exportBgPad * 2;
+    const rawHeight = rawCardHeight + exportBgPad * 2;
     // H.264 with yuv420p requires even dimensions
     const exportWidth = rawWidth + (rawWidth % 2);
     const exportHeight = rawHeight + (rawHeight % 2);
+    // Card dimensions inside the export canvas
+    const cardWidth = exportWidth - exportBgPad * 2;
+    const cardHeight = exportHeight - exportBgPad * 2;
 
-    // Compute export layouts with content-sized dimensions
+    // Compute export layouts with content-sized dimensions (card size, not total)
     const exportLayouts: StepLayout[] = [];
     for (const data of stepTokenDataRef.current) {
       const cfg = makeDefaultLayoutConfig();
-      cfg.canvasWidth = exportWidth;
-      cfg.canvasHeight = exportHeight;
+      cfg.canvasWidth = cardWidth;
+      cfg.canvasHeight = cardHeight;
       cfg.showLineNumbers = data.showLineNumbers;
       cfg.startLine = data.startLine;
 
@@ -633,8 +666,9 @@ export default function Home() {
     exportCanvas.height = exportHeight;
 
     const finalExportCfg = makeDefaultLayoutConfig();
-    finalExportCfg.canvasWidth = exportWidth;
-    finalExportCfg.canvasHeight = exportHeight;
+    finalExportCfg.canvasWidth = cardWidth;
+    finalExportCfg.canvasHeight = cardHeight;
+    finalExportCfg.backgroundPadding = exportBgPad;
 
     // For typing mode, prepend a virtual empty layout
     const effectiveExportLayouts = animationType === "typing"
@@ -672,6 +706,7 @@ export default function Home() {
         typingDurations: exportTypingDurations,
         title: filename,
         naturalFlow,
+        backgroundTheme: activeBackgroundTheme,
       });
     };
 
@@ -811,6 +846,9 @@ export default function Home() {
           themeVariant={getThemeVariant(theme)}
           soundEnabled={soundEnabled}
           onSoundToggle={() => setSoundEnabled((v) => !v)}
+          backgroundPadding={activeBackgroundTheme ? PREVIEW_BG_PADDING : 0}
+          backgroundThemeId={backgroundThemeId}
+          onBackgroundThemeIdChange={setBackgroundThemeId}
         />
       </ResizablePanelGroup>
     </div>

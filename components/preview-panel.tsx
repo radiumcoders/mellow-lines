@@ -38,6 +38,9 @@ interface PreviewPanelProps {
   themeVariant: RenderTheme;
   soundEnabled: boolean;
   onSoundToggle: () => void;
+  backgroundPadding: number;
+  backgroundThemeId: string;
+  onBackgroundThemeIdChange: (id: string) => void;
 }
 
 export function PreviewPanel({
@@ -71,6 +74,9 @@ export function PreviewPanel({
   themeVariant,
   soundEnabled,
   onSoundToggle,
+  backgroundPadding,
+  backgroundThemeId,
+  onBackgroundThemeIdChange,
 }: PreviewPanelProps) {
   return (
     <ResizablePanel
@@ -90,6 +96,9 @@ export function PreviewPanel({
         naturalFlow={naturalFlow}
         onNaturalFlowChange={onNaturalFlowChange}
         themeVariant={themeVariant}
+        backgroundPadding={backgroundPadding}
+        backgroundThemeId={backgroundThemeId}
+        onBackgroundThemeIdChange={onBackgroundThemeIdChange}
       />
 
       <PlayerControls

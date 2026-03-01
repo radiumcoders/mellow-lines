@@ -13,6 +13,8 @@ export type CanvasLayoutConfig = {
   showLineNumbers: boolean;
   startLine: number;
   titleBarHeight: number;
+  /** Extra padding on each side for the background gradient (0 = no background). */
+  backgroundPadding: number;
 };
 
 /** Padding on each side of the gutter (left and right of line numbers) */
@@ -55,6 +57,7 @@ export function makeDefaultLayoutConfig(): CanvasLayoutConfig {
     showLineNumbers: false,
     startLine: 1,
     titleBarHeight: 48,
+    backgroundPadding: 0,
   };
 }
 
@@ -71,6 +74,7 @@ export function makePreviewLayoutConfig(): CanvasLayoutConfig {
     showLineNumbers: false,
     startLine: 1,
     titleBarHeight: 40,
+    backgroundPadding: 0,
   };
 }
 
