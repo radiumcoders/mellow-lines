@@ -18,6 +18,7 @@ import {
   ComboboxLabel,
   ComboboxList,
   ComboboxSeparator,
+  ComboboxTrigger,
 } from "@/components/ui/combobox";
 import type { AnimationType } from "@/app/lib/magicMove/types";
 import type { RenderTheme } from "@/app/lib/magicMove/codeLayout";
@@ -27,7 +28,7 @@ import {
 } from "@/app/lib/magicMove/backgroundThemes";
 import { cn } from "@/lib/utils";
 
-const PADDING_PRESETS = [16, 32, 48, 64, 128] as const;
+const PADDING_PRESETS = [48, 64, 128] as const;
 
 interface CanvasPreviewProps {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
@@ -89,6 +90,7 @@ export function CanvasPreview({
   onBackgroundPaddingPxChange,
   children,
 }: CanvasPreviewProps) {
+  const activeBackgroundTheme = getBackgroundThemeById(backgroundThemeId);
   const hasShownRef = useRef(false);
   const shouldAnimate = !isLoading && !hasShownRef.current;
 
@@ -145,137 +147,147 @@ export function CanvasPreview({
           </div>
         )}
 
-        {/* Floating settings pill — two rows */}
-        <div className="absolute bottom-25 left-1/2 -translate-x-1/2 z-10 flex flex-col gap-0 rounded-2xl bg-background/60 backdrop-blur-xl shadow-lg ring-1 ring-black/[0.08] dark:ring-white/[0.08] px-1.5 py-1.5">
-          {/* Row 1: Animation & speed */}
-          <div className="flex items-center gap-2 px-1 py-0.5">
-            <span className="text-sm text-foreground/70 pl-1 whitespace-nowrap">Animation:</span>
-            <Tabs
-              value={animationType}
-              onValueChange={(v) => onAnimationTypeChange(v as AnimationType)}
-              className="w-fit"
-            >
-              <TabsList variant="transparent">
-                <TabsTrigger value="typing">Typing</TabsTrigger>
-                <TabsTrigger value="token-flow">Token Flow</TabsTrigger>
-              </TabsList>
-            </Tabs>
+        {/* Floating settings pill */}
+        <div className="absolute bottom-25 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 rounded-2xl bg-background/60 backdrop-blur-xl shadow-lg ring-1 ring-black/[0.08] dark:ring-white/[0.08] px-3 py-1.5">
+          <span className="text-sm text-foreground/70 pl-1 whitespace-nowrap">Animation:</span>
+          <Tabs
+            value={animationType}
+            onValueChange={(v) => onAnimationTypeChange(v as AnimationType)}
+            className="w-fit"
+          >
+            <TabsList variant="transparent">
+              <TabsTrigger value="typing">Typing</TabsTrigger>
+              <TabsTrigger value="token-flow">Token Flow</TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-            {animationType === "typing" && (
-              <>
-                <div className="w-px h-4 bg-border/50" />
-                <div className="flex items-center gap-1.5">
-                  <Label htmlFor="natural-flow-pill" className="text-sm whitespace-nowrap text-foreground/70">
-                    Natural flow
-                  </Label>
-                  <Switch
-                    id="natural-flow-pill"
-                    checked={naturalFlow}
-                    onCheckedChange={onNaturalFlowChange}
-                  />
-                </div>
-              </>
-            )}
-
-            <div className="w-px h-4 bg-border/50" />
-
-            {animationType === "typing" ? (
+          {animationType === "typing" && (
+            <>
+              <div className="w-px h-4 bg-border/50" />
               <div className="flex items-center gap-1.5">
-                <Label className="text-sm whitespace-nowrap text-foreground/70">
-                  Speed: {typingWpm} WPM
+                <Label htmlFor="natural-flow-pill" className="text-sm whitespace-nowrap text-foreground/70">
+                  Natural flow
                 </Label>
-                <Slider
-                  value={[typingWpm]}
-                  min={30}
-                  max={600}
-                  step={10}
-                  onValueChange={([v]) => onTypingWpmChange(v)}
-                  className="w-28"
+                <Switch
+                  id="natural-flow-pill"
+                  checked={naturalFlow}
+                  onCheckedChange={onNaturalFlowChange}
                 />
               </div>
-            ) : (
-              <div className="flex items-center gap-1.5">
-                <Label className="text-sm whitespace-nowrap text-foreground/70">
-                  Transition: {(transitionMs / 1000).toFixed(1)}s
-                </Label>
-                <Slider
-                  value={[transitionMs]}
-                  min={100}
-                  max={5000}
-                  step={100}
-                  onValueChange={([v]) => onTransitionMsChange(v)}
-                  className="w-28"
-                />
-              </div>
-            )}
-          </div>
+            </>
+          )}
 
-          {/* Row 2: Background & padding */}
-          <div className="flex items-center gap-2 px-1 py-0.5 border-t border-border/30">
-            <span className="text-sm text-foreground/70 pl-1 whitespace-nowrap">Background:</span>
-            <Combobox
-              items={groupedBackgroundThemes}
-              value={backgroundThemeId}
-              onValueChange={(v) => v && onBackgroundThemeIdChange(v as string)}
-              itemToStringLabel={(value) => backgroundThemeLabel(value as string)}
-            >
-              <ComboboxInput
-                placeholder="Background..."
-                className="h-7 w-[120px] text-sm"
+          <div className="w-px h-4 bg-border/50" />
+
+          {animationType === "typing" ? (
+            <div className="flex items-center gap-1.5">
+              <Label className="text-sm whitespace-nowrap text-foreground/70">
+                Speed: {typingWpm} WPM
+              </Label>
+              <Slider
+                value={[typingWpm]}
+                min={30}
+                max={600}
+                step={10}
+                onValueChange={([v]) => onTypingWpmChange(v)}
+                className="w-28"
               />
-              <ComboboxContent>
-                <ComboboxEmpty>No themes found</ComboboxEmpty>
-                <ComboboxList>
-                  {(group, index) => (
-                    <ComboboxGroup key={group.label} items={group.items}>
-                      <ComboboxLabel>{group.label}</ComboboxLabel>
-                      <ComboboxCollection>
-                        {(item) => {
-                          const bgTheme = getBackgroundThemeById(item);
-                          return (
-                            <ComboboxItem key={item} value={item}>
-                              <span className="flex items-center gap-2">
-                                {bgTheme ? (
-                                  <span
-                                    className="inline-block w-3 h-3 rounded-full shrink-0 ring-1 ring-black/10"
-                                    style={{ backgroundColor: bgTheme.previewColor }}
-                                  />
-                                ) : (
-                                  <span className="inline-block w-3 h-3 rounded-full shrink-0 ring-1 ring-black/10 dark:ring-white/10 bg-transparent" />
-                                )}
-                                {backgroundThemeLabel(item)}
-                              </span>
-                            </ComboboxItem>
-                          );
-                        }}
-                      </ComboboxCollection>
-                      {index < groupedBackgroundThemes.length - 1 && <ComboboxSeparator />}
-                    </ComboboxGroup>
-                  )}
-                </ComboboxList>
-              </ComboboxContent>
-            </Combobox>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <Label className="text-sm whitespace-nowrap text-foreground/70">
+                Transition: {(transitionMs / 1000).toFixed(1)}s
+              </Label>
+              <Slider
+                value={[transitionMs]}
+                min={100}
+                max={5000}
+                step={100}
+                onValueChange={([v]) => onTransitionMsChange(v)}
+                className="w-28"
+              />
+            </div>
+          )}
 
-            {backgroundThemeId !== "none" && (
-              <>
-                <div className="w-px h-4 bg-border/50" />
-                <span className="text-sm text-foreground/70 whitespace-nowrap">Padding:</span>
-                <Tabs
-                  value={String(backgroundPaddingPx)}
-                  onValueChange={(v) => onBackgroundPaddingPxChange(Number(v))}
-                  className="w-fit"
-                >
-                  <TabsList variant="transparent">
-                    {PADDING_PRESETS.map((px) => (
-                      <TabsTrigger key={px} value={String(px)}>
-                        {px}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
-              </>
-            )}
-          </div>
+          <div className="w-px h-4 bg-border/50" />
+
+          <span className="text-sm text-foreground/70 whitespace-nowrap">Background:</span>
+          <Combobox
+            items={groupedBackgroundThemes}
+            value={backgroundThemeId}
+            onValueChange={(v) => v && onBackgroundThemeIdChange(v as string)}
+            itemToStringLabel={(value) => backgroundThemeLabel(value as string)}
+          >
+            <ComboboxTrigger
+              className="flex items-center justify-center w-8 h-8 rounded-md hover:bg-accent/50 transition-colors cursor-pointer border-0 bg-transparent p-1.5"
+            >
+              <span
+                className={cn(
+                  "inline-block w-4 h-4 rounded-full shrink-0 ring-1",
+                  activeBackgroundTheme
+                    ? "ring-black/10"
+                    : "ring-foreground/20 bg-transparent border border-dashed border-foreground/30",
+                )}
+                style={activeBackgroundTheme ? { backgroundColor: activeBackgroundTheme.previewColor } : undefined}
+              />
+            </ComboboxTrigger>
+            <ComboboxContent className="min-w-48">
+              <ComboboxInput
+                placeholder="Search themes..."
+                className="h-7 text-sm"
+                showTrigger={false}
+              />
+              <ComboboxEmpty>No themes found</ComboboxEmpty>
+              <ComboboxList>
+                {(group, index) => (
+                  <ComboboxGroup key={group.label} items={group.items}>
+                    <ComboboxLabel>{group.label}</ComboboxLabel>
+                    <ComboboxCollection>
+                      {(item) => {
+                        const bgTheme = getBackgroundThemeById(item);
+                        return (
+                          <ComboboxItem key={item} value={item}>
+                            <span className="flex items-center gap-2">
+                              {bgTheme ? (
+                                <span
+                                  className="inline-block w-3 h-3 rounded-full shrink-0 ring-1 ring-black/10"
+                                  style={{ backgroundColor: bgTheme.previewColor }}
+                                />
+                              ) : (
+                                <span className="inline-block w-3 h-3 rounded-full shrink-0 ring-1 ring-black/10 dark:ring-white/10 bg-transparent" />
+                              )}
+                              {backgroundThemeLabel(item)}
+                            </span>
+                          </ComboboxItem>
+                        );
+                      }}
+                    </ComboboxCollection>
+                    {index < groupedBackgroundThemes.length - 1 && <ComboboxSeparator />}
+                  </ComboboxGroup>
+                )}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
+
+          {backgroundThemeId !== "none" && (
+            <>
+              <div className="w-px h-4 bg-border/50" />
+              <span className="text-sm text-foreground/70 whitespace-nowrap">Padding:</span>
+              <Tabs
+                value={String(backgroundPaddingPx)}
+                onValueChange={(v) => onBackgroundPaddingPxChange(Number(v))}
+                className="w-fit"
+              >
+                <TabsList variant="transparent">
+                  {PADDING_PRESETS.map((px) => (
+                    <TabsTrigger key={px} value={String(px)}>
+                      {px}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            </>
+          )}
         </div>
 
         {children}
