@@ -26,6 +26,8 @@ import type { AnimationType, Step, SimpleStep } from "../lib/magicMove/types";
 import { recordCanvasToWebm } from "../lib/video/recordCanvas";
 import { convertWebmToMp4, terminateFFmpeg } from "../lib/video/converter";
 import { DEFAULT_STEPS } from "../lib/constants";
+import { useTypingSound } from "../lib/audio/useTypingSound";
+import { generateTypingAudioTrack } from "../lib/audio/generateTypingAudioTrack";
 
 import { ResizableHandle, ResizablePanelGroup } from "@/components/ui/resizable";
 import { StepsEditor } from "@/components/steps-editor";
@@ -206,6 +208,7 @@ export default function Home() {
   const [animationType, setAnimationType] = useState<AnimationType>("typing");
   const [typingWpm, setTypingWpm] = useState<number>(120);
   const [naturalFlow, setNaturalFlow] = useState<boolean>(true);
+  const [soundEnabled, setSoundEnabled] = useState(false);
   const previewCharWidthRef = useRef<number>(0);
 
   // Compute steps from simple mode
@@ -491,6 +494,19 @@ export default function Home() {
     };
   }, [isPlaying, timeline.totalMs]);
 
+  useTypingSound({
+    enabled: soundEnabled,
+    isPlaying,
+    playheadMs,
+    timeline,
+    effectiveStepCount,
+    transitionMs,
+    typingDurations: typingTransitionDurations,
+    animationType,
+    effectiveStepCodes,
+    naturalFlow,
+  });
+
   // Cleanup blob URLs on unmount to prevent memory leaks
   useEffect(() => {
     return () => {
@@ -685,12 +701,23 @@ export default function Home() {
         setExportPhase("saving");
         setExportProgress(0);
 
+        let audioBlob: Blob | undefined;
+        if (soundEnabled && animationType === "typing") {
+          audioBlob = await generateTypingAudioTrack({
+            timeline,
+            stepCount: effectiveStepCount,
+            transitionMs,
+            typingDurations: exportTypingDurations,
+          });
+        }
+
         const mp4Blob = await convertWebmToMp4(
           blob!,
           (val) => {
             setExportProgress(val);
           },
           durationMs,
+          audioBlob,
         );
         cancelled = true;
 
@@ -782,6 +809,8 @@ export default function Home() {
           naturalFlow={naturalFlow}
           onNaturalFlowChange={setNaturalFlow}
           themeVariant={getThemeVariant(theme)}
+          soundEnabled={soundEnabled}
+          onSoundToggle={() => setSoundEnabled((v) => !v)}
         />
       </ResizablePanelGroup>
     </div>

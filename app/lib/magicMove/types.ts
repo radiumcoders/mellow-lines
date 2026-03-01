@@ -15,3 +15,10 @@ export type SimpleStep = {
 };
 
 export type AnimationType = "typing" | "token-flow";
+
+export type TimelineInfo = {
+  totalMs: number;
+  startHold: number;
+  betweenHold: number;
+  endHold: number;
+};
