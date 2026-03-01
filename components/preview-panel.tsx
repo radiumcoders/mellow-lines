@@ -36,6 +36,8 @@ interface PreviewPanelProps {
   naturalFlow: boolean;
   onNaturalFlowChange: (value: boolean) => void;
   themeVariant: RenderTheme;
+  soundEnabled: boolean;
+  onSoundToggle: () => void;
 }
 
 export function PreviewPanel({
@@ -67,6 +69,8 @@ export function PreviewPanel({
   naturalFlow,
   onNaturalFlowChange,
   themeVariant,
+  soundEnabled,
+  onSoundToggle,
 }: PreviewPanelProps) {
   return (
     <ResizablePanel
@@ -96,6 +100,8 @@ export function PreviewPanel({
         onSeek={onSeek}
         onReset={onReset}
         disabled={!stepLayouts}
+        soundEnabled={soundEnabled}
+        onSoundToggle={onSoundToggle}
       />
 
       <ExportControls
