@@ -30,6 +30,102 @@ export type BackgroundTheme = {
 
 const THEMES: BackgroundTheme[] = [
   {
+    id: "charcoal",
+    name: "Charcoal",
+    previewColor: "#1c1c1e",
+    layers: [
+      {
+        type: "linear",
+        x0: 0, y0: 0, x1: 1, y1: 1,
+        stops: [
+          { offset: 0, color: "#1c1c1e" },
+          { offset: 0.5, color: "#2c2c2e" },
+          { offset: 1, color: "#1c1c1e" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "espresso",
+    name: "Espresso",
+    previewColor: "#2c1810",
+    layers: [
+      {
+        type: "linear",
+        x0: 0, y0: 0, x1: 1, y1: 1,
+        stops: [
+          { offset: 0, color: "#1a0e08" },
+          { offset: 0.5, color: "#2c1810" },
+          { offset: 1, color: "#3d2216" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "obsidian",
+    name: "Obsidian",
+    previewColor: "#0b0b0f",
+    layers: [
+      {
+        type: "linear",
+        x0: 0, y0: 0, x1: 1, y1: 1,
+        stops: [
+          { offset: 0, color: "#0b0b0f" },
+          { offset: 0.5, color: "#15151e" },
+          { offset: 1, color: "#0b0b0f" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "walnut",
+    name: "Walnut",
+    previewColor: "#3b2a1a",
+    layers: [
+      {
+        type: "linear",
+        x0: 0, y0: 0, x1: 1, y1: 1,
+        stops: [
+          { offset: 0, color: "#261a0e" },
+          { offset: 0.5, color: "#3b2a1a" },
+          { offset: 1, color: "#1e1408" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "graphite",
+    name: "Graphite",
+    previewColor: "#2d2d30",
+    layers: [
+      {
+        type: "linear",
+        x0: 0, y0: 0, x1: 0, y1: 1,
+        stops: [
+          { offset: 0, color: "#3a3a3d" },
+          { offset: 0.5, color: "#2d2d30" },
+          { offset: 1, color: "#1e1e20" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "ash",
+    name: "Ash",
+    previewColor: "#3c3836",
+    layers: [
+      {
+        type: "linear",
+        x0: 0, y0: 0, x1: 1, y1: 1,
+        stops: [
+          { offset: 0, color: "#282625" },
+          { offset: 0.5, color: "#3c3836" },
+          { offset: 1, color: "#282625" },
+        ],
+      },
+    ],
+  },
+  {
     id: "sunset",
     name: "Sunset",
     previewColor: "#f97316",

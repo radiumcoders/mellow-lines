@@ -41,6 +41,8 @@ interface PreviewPanelProps {
   backgroundPadding: number;
   backgroundThemeId: string;
   onBackgroundThemeIdChange: (id: string) => void;
+  backgroundPaddingPx: number;
+  onBackgroundPaddingPxChange: (value: number) => void;
 }
 
 export function PreviewPanel({
@@ -77,6 +79,8 @@ export function PreviewPanel({
   backgroundPadding,
   backgroundThemeId,
   onBackgroundThemeIdChange,
+  backgroundPaddingPx,
+  onBackgroundPaddingPxChange,
 }: PreviewPanelProps) {
   return (
     <ResizablePanel
@@ -99,6 +103,8 @@ export function PreviewPanel({
         backgroundPadding={backgroundPadding}
         backgroundThemeId={backgroundThemeId}
         onBackgroundThemeIdChange={onBackgroundThemeIdChange}
+        backgroundPaddingPx={backgroundPaddingPx}
+        onBackgroundPaddingPxChange={onBackgroundPaddingPxChange}
       />
 
       <PlayerControls

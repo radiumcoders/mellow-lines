@@ -26,6 +26,8 @@ import {
 } from "@/app/lib/magicMove/backgroundThemes";
 import { cn } from "@/lib/utils";
 
+const PADDING_PRESETS = [16, 32, 48, 64, 128] as const;
+
 interface CanvasPreviewProps {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   layoutError: string | null;
@@ -41,6 +43,8 @@ interface CanvasPreviewProps {
   backgroundPadding: number;
   backgroundThemeId: string;
   onBackgroundThemeIdChange: (id: string) => void;
+  backgroundPaddingPx: number;
+  onBackgroundPaddingPxChange: (value: number) => void;
 }
 
 const groupedBackgroundThemes = (() => {
@@ -71,6 +75,8 @@ export function CanvasPreview({
   backgroundPadding,
   backgroundThemeId,
   onBackgroundThemeIdChange,
+  backgroundPaddingPx,
+  onBackgroundPaddingPxChange,
 }: CanvasPreviewProps) {
   const hasShownRef = useRef(false);
   const shouldAnimate = !isLoading && !hasShownRef.current;
@@ -203,6 +209,26 @@ export function CanvasPreview({
               </ComboboxList>
             </ComboboxContent>
           </Combobox>
+
+          {backgroundThemeId !== "none" && (
+            <>
+              <div className="w-px h-4 bg-border/50" />
+              <span className="text-xs text-muted-foreground pl-1 whitespace-nowrap">Padding:</span>
+              <Tabs
+                value={String(backgroundPaddingPx)}
+                onValueChange={(v) => onBackgroundPaddingPxChange(Number(v))}
+                className="w-fit"
+              >
+                <TabsList variant="transparent">
+                  {PADDING_PRESETS.map((px) => (
+                    <TabsTrigger key={px} value={String(px)}>
+                      {px}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            </>
+          )}
         </div>
       </div>
     </div>

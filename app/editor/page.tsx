@@ -218,10 +218,11 @@ export default function Home() {
   const [naturalFlow, setNaturalFlow] = useState<boolean>(true);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [backgroundThemeId, setBackgroundThemeId] = useState<string>("none");
+  const [backgroundPaddingPx, setBackgroundPaddingPx] = useState<number>(48);
   const previewCharWidthRef = useRef<number>(0);
 
-  const PREVIEW_BG_PADDING = 48;
-  const EXPORT_BG_PADDING = 80;
+  // Export padding scales proportionally with font size (export 26px / preview 16px)
+  const exportBgPaddingPx = Math.round(backgroundPaddingPx * 26 / 16);
 
   const activeBackgroundTheme = backgroundThemeId !== "none"
     ? getBackgroundThemeById(backgroundThemeId) ?? null
@@ -410,7 +411,7 @@ export default function Home() {
       previewCharWidthRef.current = charWidth;
 
       // Apply background padding to total canvas dimensions
-      const bgPad = backgroundThemeId !== "none" ? PREVIEW_BG_PADDING : 0;
+      const bgPad = backgroundThemeId !== "none" ? backgroundPaddingPx : 0;
       setCanvasDimensions({
         width: maxWidth + bgPad * 2,
         height: maxHeight + bgPad * 2,
@@ -426,7 +427,7 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [steps, theme, backgroundThemeId]);
+  }, [steps, theme, backgroundThemeId, backgroundPaddingPx]);
 
   // For typing mode: prepend a virtual empty step so the first transition types from scratch
   const effectiveStepLayouts = useMemo(() => {
@@ -441,7 +442,7 @@ export default function Home() {
       URL.revokeObjectURL(downloadUrl);
       setDownloadUrl(null);
     }
-  }, [steps, theme, fps, transitionMs, startHoldMs, betweenHoldMs, endHoldMs, animationType, typingWpm, naturalFlow, backgroundThemeId]); // Only those that affect the video content
+  }, [steps, theme, fps, transitionMs, startHoldMs, betweenHoldMs, endHoldMs, animationType, typingWpm, naturalFlow, backgroundThemeId, backgroundPaddingPx]); // Only those that affect the video content
 
   const renderAt = useCallback(
     (ms: number, overrideDimensions?: CanvasDimensions) => {
@@ -452,7 +453,7 @@ export default function Home() {
 
       const dims = overrideDimensions ?? canvasDimensions;
       const PIXEL_RATIO = 2;
-      const bgPad = activeBackgroundTheme ? PREVIEW_BG_PADDING : 0;
+      const bgPad = activeBackgroundTheme ? backgroundPaddingPx : 0;
 
       const cfg = makePreviewLayoutConfig();
       // canvasWidth/Height = card dimensions (without background padding)
@@ -625,7 +626,7 @@ export default function Home() {
     // Get max dimensions across all steps
     const rawCardWidth = Math.max(...stepDimensions.map((d) => d.width));
     const rawCardHeight = Math.max(...stepDimensions.map((d) => d.height));
-    const exportBgPad = activeBackgroundTheme ? EXPORT_BG_PADDING : 0;
+    const exportBgPad = activeBackgroundTheme ? exportBgPaddingPx : 0;
     const rawWidth = rawCardWidth + exportBgPad * 2;
     const rawHeight = rawCardHeight + exportBgPad * 2;
     // H.264 with yuv420p requires even dimensions
@@ -846,9 +847,11 @@ export default function Home() {
           themeVariant={getThemeVariant(theme)}
           soundEnabled={soundEnabled}
           onSoundToggle={() => setSoundEnabled((v) => !v)}
-          backgroundPadding={activeBackgroundTheme ? PREVIEW_BG_PADDING : 0}
+          backgroundPadding={activeBackgroundTheme ? backgroundPaddingPx : 0}
           backgroundThemeId={backgroundThemeId}
           onBackgroundThemeIdChange={setBackgroundThemeId}
+          backgroundPaddingPx={backgroundPaddingPx}
+          onBackgroundPaddingPxChange={setBackgroundPaddingPx}
         />
       </ResizablePanelGroup>
     </div>
