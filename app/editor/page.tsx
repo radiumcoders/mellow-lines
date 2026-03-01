@@ -824,7 +824,6 @@ export default function Home() {
             setPlayheadMs(0);
           }}
           stepLayouts={stepLayouts}
-          stepCount={steps.length}
           transitionMs={transitionMs}
           onTransitionMsChange={setTransitionMs}
           downloadUrl={downloadUrl}
