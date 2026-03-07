@@ -1,4 +1,9 @@
 import type { CanvasLayoutConfig, LayoutResult, RenderTheme } from "./codeLayout";
+import {
+  type BackgroundTheme,
+  drawBackgroundGradient,
+  drawCardShadow,
+} from "./backgroundThemes";
 
 function drawTitleBar(opts: {
   ctx: CanvasRenderingContext2D;
@@ -63,21 +68,6 @@ function roundedRectPath(
   ctx.closePath();
 }
 
-function clearAndPaintBackground(opts: {
-  ctx: CanvasRenderingContext2D;
-  config: CanvasLayoutConfig;
-  bg: string;
-}) {
-  const { ctx, config, bg } = opts;
-  // Use config dimensions (logical size) for clearing/filling
-  // The context transform will scale to actual canvas size
-  const w = config.canvasWidth;
-  const h = config.canvasHeight;
-  ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, w, h);
-}
-
 //Draws a code frame to the canvas.
 //Paints the background, card background, gutter, and tokens.
 export function drawCodeFrame(opts: {
@@ -98,12 +88,59 @@ export function drawCodeFrame(opts: {
   title?: string;
   // Optional cursor for typing animation
   cursor?: { x: number; y: number; color: string } | null;
+  // Optional background theme (gradient behind the code card)
+  backgroundTheme?: BackgroundTheme | null;
 }) {
   const { ctx, config, layout } = opts;
+  const bgPad = config.backgroundPadding;
+  const hasBackground = bgPad > 0 && opts.backgroundTheme;
 
-  clearAndPaintBackground({ ctx, config, bg: layout.bg });
+  // Total canvas size = card + background padding on each side
+  const totalW = config.canvasWidth + bgPad * 2;
+  const totalH = config.canvasHeight + bgPad * 2;
 
-  // Clip to rounded canvas bounds (no inner card)
+  // 1. Clear the full canvas
+  ctx.clearRect(0, 0, totalW, totalH);
+
+  // 2. If background theme present: draw gradient on full canvas
+  if (hasBackground) {
+    drawBackgroundGradient({
+      ctx,
+      theme: opts.backgroundTheme!,
+      width: totalW,
+      height: totalH,
+      cornerRadius: 16,
+    });
+
+    // Draw a subtle shadow behind the code card
+    drawCardShadow({
+      ctx,
+      x: bgPad,
+      y: bgPad,
+      width: config.canvasWidth,
+      height: config.canvasHeight,
+      cornerRadius: 16,
+    });
+  }
+
+  // 3. Offset into the card area
+  ctx.save();
+  if (hasBackground) {
+    ctx.translate(bgPad, bgPad);
+  }
+
+  // 4. Fill code card background
+  if (hasBackground) {
+    // Rounded card so corners are visible against the gradient
+    roundedRectPath(ctx, 0, 0, config.canvasWidth, config.canvasHeight, 16);
+    ctx.fillStyle = layout.bg;
+    ctx.fill();
+  } else {
+    ctx.fillStyle = layout.bg;
+    ctx.fillRect(0, 0, config.canvasWidth, config.canvasHeight);
+  }
+
+  // 5. Clip to card rounded rect
   ctx.save();
   roundedRectPath(ctx, 0, 0, config.canvasWidth, config.canvasHeight, 16);
   ctx.clip();
@@ -128,8 +165,6 @@ export function drawCodeFrame(opts: {
   const gutterWidth = gutterEnabled ? layout.gutter.width : 0;
 
   if (gutterEnabled && gutterWidth > 0) {
-    const x0 = config.paddingX;
-    const y0 = config.paddingY;
     const startLine = opts.startLine ?? config.startLine;
     const lineCount =
       opts.lineCount ?? Math.round((config.canvasHeight - config.paddingY * 2) / config.lineHeight);
@@ -210,6 +245,9 @@ export function drawCodeFrame(opts: {
     ctx.fillRect(x, y, 2, config.fontSize);
   }
 
+  // Restore clip
+  ctx.restore();
+  // Restore translate (background offset)
   ctx.restore();
   ctx.globalAlpha = 1;
 }

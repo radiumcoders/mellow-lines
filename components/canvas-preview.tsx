@@ -6,8 +6,24 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Combobox,
+  ComboboxCollection,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxGroup,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxLabel,
+  ComboboxList,
+  ComboboxSeparator,
+} from "@/components/ui/combobox";
 import type { AnimationType } from "@/app/lib/magicMove/types";
 import type { RenderTheme } from "@/app/lib/magicMove/codeLayout";
+import {
+  getAllBackgroundThemes,
+  getBackgroundThemeById,
+} from "@/app/lib/magicMove/backgroundThemes";
 import { cn } from "@/lib/utils";
 
 interface CanvasPreviewProps {
@@ -22,6 +38,22 @@ interface CanvasPreviewProps {
   naturalFlow: boolean;
   onNaturalFlowChange: (value: boolean) => void;
   themeVariant: RenderTheme;
+  backgroundPadding: number;
+  backgroundThemeId: string;
+  onBackgroundThemeIdChange: (id: string) => void;
+}
+
+const groupedBackgroundThemes = (() => {
+  const themes = getAllBackgroundThemes();
+  return [
+    { label: "Default", items: ["none"] },
+    { label: "Gradient", items: themes.map((t) => t.id) },
+  ];
+})();
+
+function backgroundThemeLabel(id: string): string {
+  if (id === "none") return "None";
+  return getBackgroundThemeById(id)?.name ?? id;
 }
 
 export function CanvasPreview({
@@ -36,6 +68,9 @@ export function CanvasPreview({
   naturalFlow,
   onNaturalFlowChange,
   themeVariant,
+  backgroundPadding,
+  backgroundThemeId,
+  onBackgroundThemeIdChange,
 }: CanvasPreviewProps) {
   const hasShownRef = useRef(false);
   const shouldAnimate = !isLoading && !hasShownRef.current;
@@ -63,11 +98,20 @@ export function CanvasPreview({
       <div className="flex-1 overflow-auto relative flex items-center justify-center p-8 bg-[url('/grid-pattern.svg')] dark:bg-[url('/grid-pattern-dark.svg')] bg-center">
         {!isLoading && (
           <div
-            className={`relative shadow-2xl rounded-lg overflow-hidden ring-1 ring-black/5 dark:ring-white/10 bg-zinc-950 ${shouldAnimate ? "opacity-0 animate-[fadeIn_0.3s_ease-in-out_forwards]" : "opacity-100"}`}
+            className={cn(
+              "relative rounded-lg overflow-hidden",
+              backgroundPadding > 0
+                ? ""
+                : "shadow-2xl ring-1 ring-black/5 dark:ring-white/10 bg-zinc-950",
+              shouldAnimate ? "opacity-0 animate-[fadeIn_0.3s_ease-in-out_forwards]" : "opacity-100",
+            )}
           >
             <canvas ref={canvasRef} className="block" />
             {/* Filename input overlay - displays title in preview */}
-            <div className="absolute top-0 left-0 right-0 h-10 flex items-center justify-center">
+            <div
+              className="absolute left-0 right-0 h-10 flex items-center justify-center"
+              style={{ top: backgroundPadding }}
+            >
               <input
                 type="text"
                 value={filename}
@@ -113,6 +157,52 @@ export function CanvasPreview({
               </div>
             </>
           )}
+
+          <div className="w-px h-4 bg-border/50" />
+
+          <span className="text-xs text-muted-foreground pl-1 whitespace-nowrap">Background:</span>
+          <Combobox
+            items={groupedBackgroundThemes}
+            value={backgroundThemeId}
+            onValueChange={(v) => v && onBackgroundThemeIdChange(v as string)}
+            itemToStringLabel={(value) => backgroundThemeLabel(value as string)}
+          >
+            <ComboboxInput
+              placeholder="Background..."
+              className="h-7 w-[120px] text-xs"
+            />
+            <ComboboxContent>
+              <ComboboxEmpty>No themes found</ComboboxEmpty>
+              <ComboboxList>
+                {(group, index) => (
+                  <ComboboxGroup key={group.label} items={group.items}>
+                    <ComboboxLabel>{group.label}</ComboboxLabel>
+                    <ComboboxCollection>
+                      {(item) => {
+                        const bgTheme = getBackgroundThemeById(item);
+                        return (
+                          <ComboboxItem key={item} value={item}>
+                            <span className="flex items-center gap-2">
+                              {bgTheme ? (
+                                <span
+                                  className="inline-block w-3 h-3 rounded-full shrink-0 ring-1 ring-black/10"
+                                  style={{ backgroundColor: bgTheme.previewColor }}
+                                />
+                              ) : (
+                                <span className="inline-block w-3 h-3 rounded-full shrink-0 ring-1 ring-black/10 dark:ring-white/10 bg-transparent" />
+                              )}
+                              {backgroundThemeLabel(item)}
+                            </span>
+                          </ComboboxItem>
+                        );
+                      }}
+                    </ComboboxCollection>
+                    {index < groupedBackgroundThemes.length - 1 && <ComboboxSeparator />}
+                  </ComboboxGroup>
+                )}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
         </div>
       </div>
     </div>
