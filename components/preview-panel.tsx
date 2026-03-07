@@ -3,7 +3,6 @@
 import { ResizablePanel } from "@/components/ui/resizable";
 import { CanvasPreview } from "./canvas-preview";
 import { PlayerControls } from "./player-controls";
-import { ExportControls } from "./export-controls";
 import type { AnimationType } from "@/app/lib/magicMove/types";
 import type { RenderTheme } from "@/app/lib/magicMove/codeLayout";
 
@@ -18,7 +17,6 @@ interface PreviewPanelProps {
   onSeek: (ms: number) => void;
   onReset: () => void;
   stepLayouts: unknown[] | null;
-  stepCount: number;
   transitionMs: number;
   onTransitionMsChange: (value: number) => void;
   downloadUrl: string | null;
@@ -41,6 +39,8 @@ interface PreviewPanelProps {
   backgroundPadding: number;
   backgroundThemeId: string;
   onBackgroundThemeIdChange: (id: string) => void;
+  backgroundPaddingPx: number;
+  onBackgroundPaddingPxChange: (value: number) => void;
 }
 
 export function PreviewPanel({
@@ -54,7 +54,6 @@ export function PreviewPanel({
   onSeek,
   onReset,
   stepLayouts,
-  stepCount,
   transitionMs,
   onTransitionMsChange,
   downloadUrl,
@@ -77,6 +76,8 @@ export function PreviewPanel({
   backgroundPadding,
   backgroundThemeId,
   onBackgroundThemeIdChange,
+  backgroundPaddingPx,
+  onBackgroundPaddingPxChange,
 }: PreviewPanelProps) {
   return (
     <ResizablePanel
@@ -95,40 +96,36 @@ export function PreviewPanel({
         onAnimationTypeChange={onAnimationTypeChange}
         naturalFlow={naturalFlow}
         onNaturalFlowChange={onNaturalFlowChange}
+        typingWpm={typingWpm}
+        onTypingWpmChange={onTypingWpmChange}
+        transitionMs={transitionMs}
+        onTransitionMsChange={onTransitionMsChange}
         themeVariant={themeVariant}
         backgroundPadding={backgroundPadding}
         backgroundThemeId={backgroundThemeId}
         onBackgroundThemeIdChange={onBackgroundThemeIdChange}
-      />
-
-      <PlayerControls
-        isPlaying={isPlaying}
-        onPlayPause={onPlayPause}
-        playheadMs={playheadMs}
-        totalMs={totalMs}
-        onSeek={onSeek}
-        onReset={onReset}
-        disabled={!stepLayouts}
-        soundEnabled={soundEnabled}
-        onSoundToggle={onSoundToggle}
-      />
-
-      <ExportControls
-        stepCount={stepCount}
-        totalMs={totalMs}
-        transitionMs={transitionMs}
-        onTransitionMsChange={onTransitionMsChange}
-        downloadUrl={downloadUrl}
-        isExporting={isExporting}
-        exportPhase={exportPhase}
-        exportProgress={exportProgress}
-        onExport={onExport}
-        canExport={canExport}
-        filename={filename}
-        animationType={animationType}
-        typingWpm={typingWpm}
-        onTypingWpmChange={onTypingWpmChange}
-      />
+        backgroundPaddingPx={backgroundPaddingPx}
+        onBackgroundPaddingPxChange={onBackgroundPaddingPxChange}
+      >
+        <PlayerControls
+          isPlaying={isPlaying}
+          onPlayPause={onPlayPause}
+          playheadMs={playheadMs}
+          totalMs={totalMs}
+          onSeek={onSeek}
+          onReset={onReset}
+          disabled={!stepLayouts}
+          soundEnabled={soundEnabled}
+          onSoundToggle={onSoundToggle}
+          downloadUrl={downloadUrl}
+          isExporting={isExporting}
+          exportPhase={exportPhase}
+          exportProgress={exportProgress}
+          onExport={onExport}
+          canExport={canExport}
+          filename={filename}
+        />
+      </CanvasPreview>
     </ResizablePanel>
   );
 }
