@@ -357,7 +357,6 @@ export default function Home() {
   useEffect(() => {
     let cancelled = false;
     setLayoutError(null);
-    setStepLayouts(null);
 
     (async () => {
       const c = document.createElement("canvas");
