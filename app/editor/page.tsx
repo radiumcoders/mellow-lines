@@ -286,7 +286,7 @@ export default function Home() {
   }, [simpleSteps, selectedLang, simpleShowLineNumbers, simpleStartLine]);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [stepLayouts, setStepLayouts] = useState<StepLayout[] | null>(null);
-  const [canvasDimensions, setCanvasDimensions] = useState<CanvasDimensions>({
+  const [cardDimensions, setCardDimensions] = useState<CanvasDimensions>({
     width: 1920,
     height: 1080,
   });
@@ -345,6 +345,14 @@ export default function Home() {
     const totalMs = startHold + transitionTotal + transitions * betweenHold + endHold;
     return { totalMs, startHold, betweenHold, endHold };
   }, [effectiveStepCount, transitionMs, startHoldMs, betweenHoldMs, endHoldMs, typingTransitionDurations]);
+
+  const previewCanvasDimensions = useMemo(() => {
+    const bgPad = activeBackgroundTheme ? backgroundPaddingPx : 0;
+    return {
+      width: cardDimensions.width + bgPad * 2,
+      height: cardDimensions.height + bgPad * 2,
+    };
+  }, [activeBackgroundTheme, backgroundPaddingPx, cardDimensions]);
 
   useEffect(() => {
     let cancelled = false;
@@ -458,11 +466,9 @@ export default function Home() {
       if (cancelled) return;
       previewCharWidthRef.current = charWidth;
 
-      // Apply background padding to total canvas dimensions
-      const bgPad = backgroundThemeId !== "none" ? backgroundPaddingPx : 0;
-      setCanvasDimensions({
-        width: maxWidth + bgPad * 2,
-        height: maxHeight + bgPad * 2,
+      setCardDimensions({
+        width: maxWidth,
+        height: maxHeight,
       });
       setStepLayouts(nextLayouts);
     })().catch((e: unknown) => {
@@ -473,7 +479,7 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [steps, theme, themeVariant, backgroundThemeId, backgroundPaddingPx]);
+  }, [steps, theme, themeVariant]);
 
   // For typing mode: prepend a virtual empty step so the first transition types from scratch
   const effectiveStepLayouts = useMemo(() => {
@@ -515,7 +521,7 @@ export default function Home() {
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      const dims = overrideDimensions ?? canvasDimensions;
+      const dims = overrideDimensions ?? previewCanvasDimensions;
       const hasBackground = !!activeBackgroundTheme;
       const pixelRatio = getPreviewPixelRatio(
         hasBackground,
@@ -595,7 +601,7 @@ export default function Home() {
         scaleSnapThreshold: hasBackground ? 0.01 : 0.001,
       });
     },
-    [effectiveStepLayouts, effectiveStepCodes, animationType, themeVariant, timeline, transitionMs, typingTransitionDurations, canvasDimensions, naturalFlow, activeBackgroundTheme, tokenFlowPlans, tokenFlowStyle],
+    [effectiveStepLayouts, effectiveStepCodes, animationType, themeVariant, timeline, transitionMs, typingTransitionDurations, previewCanvasDimensions, naturalFlow, activeBackgroundTheme, backgroundPaddingPx, tokenFlowPlans, tokenFlowStyle],
   );
 
   useEffect(() => {
