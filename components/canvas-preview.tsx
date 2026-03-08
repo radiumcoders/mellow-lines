@@ -294,20 +294,22 @@ export function CanvasPreview({
             {backgroundThemeId !== "none" && (
               <>
                 <div className="h-4 w-px bg-border/50" />
-                <span className="text-sm whitespace-nowrap text-foreground/70">Padding:</span>
-                <Tabs
-                  value={String(backgroundPaddingPx)}
-                  onValueChange={(v) => onBackgroundPaddingPxChange(Number(v))}
-                  className="w-fit"
-                >
-                  <TabsList variant="transparent">
-                    {PADDING_PRESETS.map((px) => (
-                      <TabsTrigger key={px} value={String(px)}>
-                        {px}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
+                <div className="flex items-center gap-1.5 whitespace-nowrap">
+                  <span className="text-sm text-foreground/70">Padding:</span>
+                  <Tabs
+                    value={String(backgroundPaddingPx)}
+                    onValueChange={(v) => onBackgroundPaddingPxChange(Number(v))}
+                    className="w-fit"
+                  >
+                    <TabsList variant="transparent">
+                      {PADDING_PRESETS.map((px) => (
+                        <TabsTrigger key={px} value={String(px)}>
+                          {px}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  </Tabs>
+                </div>
               </>
             )}
           </div>
