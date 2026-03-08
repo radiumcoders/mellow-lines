@@ -1,4 +1,5 @@
 import type { CanvasLayoutConfig, LayoutResult, RenderTheme } from "./codeLayout";
+import type { AnimatedRegionHighlight, AnimatedToken } from "./animate";
 import {
   type BackgroundTheme,
   drawBackgroundGradient,
@@ -76,7 +77,8 @@ export function drawCodeFrame(opts: {
   layout: LayoutResult;
   theme: RenderTheme;
   // Optional override tokens list (for animation)
-  tokens?: { content: string; color: string; x: number; y: number; opacity: number }[];
+  tokens?: AnimatedToken[];
+  regionHighlights?: AnimatedRegionHighlight[];
   // Optional gutter override (for animation)
   showLineNumbers?: boolean;
   startLine?: number;
@@ -218,7 +220,7 @@ export function drawCodeFrame(opts: {
   ctx.font = `${config.fontSize}px ${config.fontFamily}`;
   ctx.textBaseline = "top";
 
-  const tokensToDraw =
+  const tokensToDraw: AnimatedToken[] =
     opts.tokens ??
     layout.tokens.map((t) => ({
       content: t.content,
@@ -228,11 +230,76 @@ export function drawCodeFrame(opts: {
       opacity: 1,
     }));
 
+  if (opts.regionHighlights) {
+    for (const highlight of opts.regionHighlights) {
+      ctx.save();
+
+      if (highlight.kind === "connector") {
+        if (highlight.opacity < 0.01 || highlight.width <= 0) {
+          ctx.restore();
+          continue;
+        }
+        ctx.globalAlpha = Math.max(0, Math.min(1, highlight.opacity));
+        ctx.strokeStyle = highlight.color;
+        ctx.lineWidth = highlight.width;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(highlight.x1, highlight.y1);
+        ctx.lineTo(highlight.x2, highlight.y2);
+        ctx.stroke();
+        ctx.restore();
+        continue;
+      }
+
+      if (highlight.opacity < 0.01 || highlight.width <= 0 || highlight.height <= 0) {
+        ctx.restore();
+        continue;
+      }
+
+      ctx.globalAlpha = Math.max(0, Math.min(1, highlight.opacity));
+      roundedRectPath(
+        ctx,
+        highlight.x,
+        highlight.y,
+        highlight.width,
+        highlight.height,
+        highlight.radius,
+      );
+      ctx.fillStyle = highlight.color;
+      ctx.fill();
+
+      if (highlight.strokeColor && (highlight.strokeOpacity ?? 0) > 0.01) {
+        ctx.globalAlpha = Math.max(0, Math.min(1, highlight.strokeOpacity ?? 0));
+        ctx.strokeStyle = highlight.strokeColor;
+        ctx.lineWidth = highlight.strokeWidth ?? 1;
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+  }
+
   for (const t of tokensToDraw) {
     if (!t.content) continue;
-    ctx.globalAlpha = Math.max(0, Math.min(1, t.opacity));
+    const opacity = Math.max(0, Math.min(1, t.opacity));
+    if (opacity < 0.01) continue;
+
+    const scale = t.scale ?? 1;
+
+    if (Math.abs(scale - 1) < 0.001) {
+      ctx.globalAlpha = opacity;
+      ctx.fillStyle = t.color;
+      ctx.fillText(t.content, t.x, t.y);
+      continue;
+    }
+
+    ctx.save();
+    ctx.globalAlpha = opacity;
     ctx.fillStyle = t.color;
-    ctx.fillText(t.content, t.x, t.y);
+    ctx.translate(t.x, t.y);
+    ctx.scale(scale, scale);
+    ctx.fillText(t.content, 0, 0);
+    ctx.restore();
   }
 
   // Draw cursor if provided (typing animation)

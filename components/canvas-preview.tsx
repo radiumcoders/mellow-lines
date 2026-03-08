@@ -20,7 +20,7 @@ import {
   ComboboxSeparator,
   ComboboxTrigger,
 } from "@/components/ui/combobox";
-import type { AnimationType } from "@/app/lib/magicMove/types";
+import type { AnimationType, TokenFlowPreset } from "@/app/lib/magicMove/types";
 import type { RenderTheme } from "@/app/lib/magicMove/codeLayout";
 import {
   getAllBackgroundThemes,
@@ -29,6 +29,19 @@ import {
 import { cn } from "@/lib/utils";
 
 const PADDING_PRESETS = [48, 64, 128] as const;
+const TOKEN_FLOW_PRESET_META: Record<TokenFlowPreset, {
+  summary: string;
+}> = {
+  precise: {
+    summary: "Quiet, exact motion for technical walkthroughs where clarity matters most.",
+  },
+  studio: {
+    summary: "Balanced default with smooth, polished motion that feels premium without distraction.",
+  },
+  cinematic: {
+    summary: "Broader, expressive motion with added emphasis for demos, showcases, and storytelling.",
+  },
+};
 
 interface CanvasPreviewProps {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
@@ -39,6 +52,8 @@ interface CanvasPreviewProps {
   onFilenameChange: (value: string) => void;
   animationType: AnimationType;
   onAnimationTypeChange: (value: AnimationType) => void;
+  tokenFlowPreset: TokenFlowPreset;
+  onTokenFlowPresetChange: (value: TokenFlowPreset) => void;
   naturalFlow: boolean;
   onNaturalFlowChange: (value: boolean) => void;
   typingWpm: number;
@@ -79,6 +94,8 @@ export function CanvasPreview({
   onFilenameChange,
   animationType,
   onAnimationTypeChange,
+  tokenFlowPreset,
+  onTokenFlowPresetChange,
   naturalFlow,
   onNaturalFlowChange,
   typingWpm,
@@ -94,6 +111,7 @@ export function CanvasPreview({
   children,
 }: CanvasPreviewProps) {
   const activeBackgroundTheme = getBackgroundThemeById(backgroundThemeId);
+  const activeTokenFlowPreset = TOKEN_FLOW_PRESET_META[tokenFlowPreset];
   const hasShownRef = useRef(false);
   const shouldAnimate = !isLoading && !hasShownRef.current;
 
@@ -150,146 +168,207 @@ export function CanvasPreview({
           </div>
         )}
 
-        {/* Floating settings pill */}
-        <div className="absolute bottom-25 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 rounded-2xl bg-background/60 backdrop-blur-xl shadow-lg ring-1 ring-black/[0.08] dark:ring-white/[0.08] px-3 py-1.5">
-          <span className="text-sm text-foreground/70 pl-1 whitespace-nowrap">Animation:</span>
-          <Tabs
-            value={animationType}
-            onValueChange={(v) => onAnimationTypeChange(v as AnimationType)}
-            className="w-fit"
-          >
-            <TabsList variant="transparent">
-              <TabsTrigger value="typing">Typing</TabsTrigger>
-              <TabsTrigger value="token-flow">Token Flow</TabsTrigger>
-            </TabsList>
-          </Tabs>
+        <div className="absolute bottom-25 left-1/2 -translate-x-1/2 z-10 flex w-[min(calc(100%-2rem),56rem)] flex-col items-center gap-2">
+          {/* Floating settings pill */}
+          <div className="flex max-w-full flex-wrap items-center justify-center gap-2 rounded-2xl bg-background/60 px-3 py-1.5 shadow-lg ring-1 ring-black/[0.08] backdrop-blur-xl dark:ring-white/[0.08]">
+            <span className="pl-1 text-sm whitespace-nowrap text-foreground/70">Animation:</span>
+            <Tabs
+              value={animationType}
+              onValueChange={(v) => onAnimationTypeChange(v as AnimationType)}
+              className="w-fit"
+            >
+              <TabsList variant="transparent">
+                <TabsTrigger value="typing">Typing</TabsTrigger>
+                <TabsTrigger value="token-flow">Token Flow</TabsTrigger>
+              </TabsList>
+            </Tabs>
 
-          {animationType === "typing" && (
-            <>
-              <div className="w-px h-4 bg-border/50" />
+            {animationType === "typing" && (
+              <>
+                <div className="h-4 w-px bg-border/50" />
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor="natural-flow-pill" className="text-sm whitespace-nowrap text-foreground/70">
+                    Natural flow
+                  </Label>
+                  <Switch
+                    id="natural-flow-pill"
+                    checked={naturalFlow}
+                    onCheckedChange={onNaturalFlowChange}
+                  />
+                </div>
+              </>
+            )}
+
+            <div className="h-4 w-px bg-border/50" />
+
+            {animationType === "typing" ? (
               <div className="flex items-center gap-1.5">
-                <Label htmlFor="natural-flow-pill" className="text-sm whitespace-nowrap text-foreground/70">
-                  Natural flow
+                <Label className="text-sm whitespace-nowrap text-foreground/70">
+                  Speed: {typingWpm} WPM
                 </Label>
-                <Switch
-                  id="natural-flow-pill"
-                  checked={naturalFlow}
-                  onCheckedChange={onNaturalFlowChange}
+                <Slider
+                  value={[typingWpm]}
+                  min={30}
+                  max={600}
+                  step={10}
+                  onValueChange={([v]) => onTypingWpmChange(v)}
+                  className="w-28"
                 />
               </div>
-            </>
-          )}
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <Label className="text-sm whitespace-nowrap text-foreground/70">
+                  Transition: {(transitionMs / 1000).toFixed(1)}s
+                </Label>
+                <Slider
+                  value={[transitionMs]}
+                  min={100}
+                  max={5000}
+                  step={100}
+                  onValueChange={([v]) => onTransitionMsChange(v)}
+                  className="w-28"
+                />
+              </div>
+            )}
 
-          <div className="w-px h-4 bg-border/50" />
+            <div className="h-4 w-px bg-border/50" />
 
-          {animationType === "typing" ? (
-            <div className="flex items-center gap-1.5">
-              <Label className="text-sm whitespace-nowrap text-foreground/70">
-                Speed: {typingWpm} WPM
-              </Label>
-              <Slider
-                value={[typingWpm]}
-                min={30}
-                max={600}
-                step={10}
-                onValueChange={([v]) => onTypingWpmChange(v)}
-                className="w-28"
-              />
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5">
-              <Label className="text-sm whitespace-nowrap text-foreground/70">
-                Transition: {(transitionMs / 1000).toFixed(1)}s
-              </Label>
-              <Slider
-                value={[transitionMs]}
-                min={100}
-                max={5000}
-                step={100}
-                onValueChange={([v]) => onTransitionMsChange(v)}
-                className="w-28"
-              />
-            </div>
-          )}
-
-          <div className="w-px h-4 bg-border/50" />
-
-          <span className="text-sm text-foreground/70 whitespace-nowrap">Background:</span>
-          <Combobox
-            items={groupedBackgroundThemes}
-            value={backgroundThemeId}
-            onValueChange={(v) => v && onBackgroundThemeIdChange(v as string)}
-            itemToStringLabel={(value) => backgroundThemeLabel(value as string)}
-          >
-            <ComboboxTrigger
-              className="flex items-center justify-center w-8 h-8 rounded-md hover:bg-accent/50 transition-colors cursor-pointer border-0 bg-transparent p-1.5"
+            <span className="text-sm whitespace-nowrap text-foreground/70">Background:</span>
+            <Combobox
+              items={groupedBackgroundThemes}
+              value={backgroundThemeId}
+              onValueChange={(v) => v && onBackgroundThemeIdChange(v as string)}
+              itemToStringLabel={(value) => backgroundThemeLabel(value as string)}
             >
-              <span
-                className={cn(
-                  "inline-block w-4 h-4 rounded-full shrink-0 ring-1",
-                  activeBackgroundTheme
-                    ? "ring-black/10"
-                    : "ring-foreground/20 bg-transparent border border-dashed border-foreground/30",
-                )}
-                style={activeBackgroundTheme ? { backgroundColor: activeBackgroundTheme.previewColor } : undefined}
-              />
-            </ComboboxTrigger>
-            <ComboboxContent className="min-w-48">
-              <ComboboxInput
-                placeholder="Search themes..."
-                className="h-7 text-sm"
-                showTrigger={false}
-              />
-              <ComboboxEmpty>No themes found</ComboboxEmpty>
-              <ComboboxList>
-                {(group, index) => (
-                  <ComboboxGroup key={group.label} items={group.items}>
-                    <ComboboxLabel>{group.label}</ComboboxLabel>
-                    <ComboboxCollection>
-                      {(item) => {
-                        const bgTheme = getBackgroundThemeById(item);
-                        return (
-                          <ComboboxItem key={item} value={item}>
-                            <span className="flex items-center gap-2">
-                              {bgTheme ? (
-                                <span
-                                  className="inline-block w-3 h-3 rounded-full shrink-0 ring-1 ring-black/10"
-                                  style={{ backgroundColor: bgTheme.previewColor }}
-                                />
-                              ) : (
-                                <span className="inline-block w-3 h-3 rounded-full shrink-0 ring-1 ring-black/10 dark:ring-white/10 bg-transparent" />
-                              )}
-                              {backgroundThemeLabel(item)}
-                            </span>
-                          </ComboboxItem>
-                        );
-                      }}
-                    </ComboboxCollection>
-                    {index < groupedBackgroundThemes.length - 1 && <ComboboxSeparator />}
-                  </ComboboxGroup>
-                )}
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
-
-          {backgroundThemeId !== "none" && (
-            <>
-              <div className="w-px h-4 bg-border/50" />
-              <span className="text-sm text-foreground/70 whitespace-nowrap">Padding:</span>
-              <Tabs
-                value={String(backgroundPaddingPx)}
-                onValueChange={(v) => onBackgroundPaddingPxChange(Number(v))}
-                className="w-fit"
+              <ComboboxTrigger
+                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-1.5 transition-colors hover:bg-accent/50"
               >
-                <TabsList variant="transparent">
-                  {PADDING_PRESETS.map((px) => (
-                    <TabsTrigger key={px} value={String(px)}>
-                      {px}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
-            </>
+                <span
+                  className={cn(
+                    "inline-block h-4 w-4 shrink-0 rounded-full ring-1",
+                    activeBackgroundTheme
+                      ? "ring-black/10"
+                      : "border border-dashed border-foreground/30 bg-transparent ring-foreground/20",
+                  )}
+                  style={activeBackgroundTheme ? { backgroundColor: activeBackgroundTheme.previewColor } : undefined}
+                />
+              </ComboboxTrigger>
+              <ComboboxContent className="min-w-48">
+                <ComboboxInput
+                  placeholder="Search themes..."
+                  className="h-7 text-sm"
+                  showTrigger={false}
+                />
+                <ComboboxEmpty>No themes found</ComboboxEmpty>
+                <ComboboxList>
+                  {(group, index) => (
+                    <ComboboxGroup key={group.label} items={group.items}>
+                      <ComboboxLabel>{group.label}</ComboboxLabel>
+                      <ComboboxCollection>
+                        {(item) => {
+                          const bgTheme = getBackgroundThemeById(item);
+                          return (
+                            <ComboboxItem key={item} value={item}>
+                              <span className="flex items-center gap-2">
+                                {bgTheme ? (
+                                  <span
+                                    className="inline-block h-3 w-3 shrink-0 rounded-full ring-1 ring-black/10"
+                                    style={{ backgroundColor: bgTheme.previewColor }}
+                                  />
+                                ) : (
+                                  <span className="inline-block h-3 w-3 shrink-0 rounded-full bg-transparent ring-1 ring-black/10 dark:ring-white/10" />
+                                )}
+                                {backgroundThemeLabel(item)}
+                              </span>
+                            </ComboboxItem>
+                          );
+                        }}
+                      </ComboboxCollection>
+                      {index < groupedBackgroundThemes.length - 1 && <ComboboxSeparator />}
+                    </ComboboxGroup>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+
+            {backgroundThemeId !== "none" && (
+              <>
+                <div className="h-4 w-px bg-border/50" />
+                <span className="text-sm whitespace-nowrap text-foreground/70">Padding:</span>
+                <Tabs
+                  value={String(backgroundPaddingPx)}
+                  onValueChange={(v) => onBackgroundPaddingPxChange(Number(v))}
+                  className="w-fit"
+                >
+                  <TabsList variant="transparent">
+                    {PADDING_PRESETS.map((px) => (
+                      <TabsTrigger key={px} value={String(px)}>
+                        {px}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </Tabs>
+              </>
+            )}
+          </div>
+
+          {animationType === "token-flow" && (
+            <div className="w-fit max-w-full rounded-2xl border border-black/[0.06] bg-background/72 px-3 py-1.5 shadow-lg ring-1 ring-white/30 backdrop-blur-xl dark:border-white/[0.08] dark:ring-white/[0.06]">
+              <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-nowrap sm:items-center sm:gap-5">
+                <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+                  <span className="text-sm whitespace-nowrap text-foreground/70">
+                    Profile:
+                  </span>
+                  <Tabs
+                    value={tokenFlowPreset}
+                    onValueChange={(v) => onTokenFlowPresetChange(v as TokenFlowPreset)}
+                    className="w-fit"
+                  >
+                    <TabsList variant="transparent">
+                      <TabsTrigger value="precise">
+                        <span className="inline-flex items-center gap-1">
+                          <span>Precise</span>
+                          {tokenFlowPreset === "precise" && (
+                            <span className="text-red-500" aria-hidden="true">
+                              *
+                            </span>
+                          )}
+                        </span>
+                      </TabsTrigger>
+                      <TabsTrigger value="studio">
+                        <span className="inline-flex items-center gap-1">
+                          <span>Studio</span>
+                          {tokenFlowPreset === "studio" && (
+                            <span className="text-red-500" aria-hidden="true">
+                              *
+                            </span>
+                          )}
+                        </span>
+                      </TabsTrigger>
+                      <TabsTrigger value="cinematic">
+                        <span className="inline-flex items-center gap-1">
+                          <span>Cinematic</span>
+                          {tokenFlowPreset === "cinematic" && (
+                            <span className="text-red-500" aria-hidden="true">
+                              *
+                            </span>
+                          )}
+                        </span>
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </div>
+
+                <div className="hidden h-4 w-px shrink-0 bg-border/50 sm:block" />
+
+                <p className="text-sm leading-6 text-foreground/70 sm:min-w-0 sm:whitespace-nowrap">
+                  <span className="font-semibold text-red-500" aria-hidden="true">
+                    *
+                  </span>{" "}
+                  {activeTokenFlowPreset.summary}
+                </p>
+              </div>
+            </div>
           )}
         </div>
 
