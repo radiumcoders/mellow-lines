@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Play, Pause, RotateCcw, Volume2, VolumeX, Download, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { useThrottledValue } from "@tanstack/react-pacer";
 
 interface PlayerControlsProps {
   isPlaying: boolean;
@@ -20,7 +19,7 @@ interface PlayerControlsProps {
   disabled?: boolean;
   downloadUrl: string | null;
   isExporting: boolean;
-  exportPhase: "recording" | "saving" | null;
+  exportPhase: "rendering" | "saving" | null;
   exportProgress: number;
   onExport: (format: "webm" | "mp4") => void;
   canExport: boolean;
@@ -46,13 +45,58 @@ export function PlayerControls({
   filename,
 }: PlayerControlsProps) {
   const [format, setFormat] = useState<"webm" | "mp4">("mp4");
-  const statusText = exportPhase === "saving" ? "Preparing" : "Recording";
+  const [displayPlayheadMs, setDisplayPlayheadMs] = useState(playheadMs);
+  const displayPlayheadRef = useRef(playheadMs);
+  const rafRef = useRef<number | null>(null);
+  const lastFrameRef = useRef<number | null>(null);
+  const statusText = exportPhase === "saving" ? "Preparing" : "Rendering";
 
-  // Throttle (not debounce) because we want regular updates during playback.
-  // Debounce would wait for the value to stop changing, which never happens during playback.
-  const [throttledPlayheadMs] = useThrottledValue(playheadMs, {
-    wait: 20,
-  });
+  useEffect(() => {
+    if (!isPlaying) {
+      displayPlayheadRef.current = playheadMs;
+      setDisplayPlayheadMs(playheadMs);
+      return;
+    }
+
+    const hasWrapped = playheadMs < displayPlayheadRef.current;
+    const hasDrifted = Math.abs(playheadMs - displayPlayheadRef.current) > 120;
+    if (hasWrapped || hasDrifted) {
+      displayPlayheadRef.current = playheadMs;
+      setDisplayPlayheadMs(playheadMs);
+    }
+  }, [isPlaying, playheadMs]);
+
+  useEffect(() => {
+    if (!isPlaying) {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+      lastFrameRef.current = null;
+      return;
+    }
+
+    const tick = (now: number) => {
+      const last = lastFrameRef.current ?? now;
+      lastFrameRef.current = now;
+      const dt = now - last;
+      const next = totalMs <= 0
+        ? 0
+        : (displayPlayheadRef.current + dt) % totalMs;
+
+      displayPlayheadRef.current = next;
+      setDisplayPlayheadMs(next);
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    displayPlayheadRef.current = playheadMs;
+    setDisplayPlayheadMs(playheadMs);
+    rafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+      lastFrameRef.current = null;
+    };
+  }, [isPlaying, playheadMs, totalMs]);
 
   return (
     <div className="absolute bottom-2 left-4 right-4 z-10 rounded-2xl bg-background/60 backdrop-blur-xl shadow-lg ring-1 ring-black/[0.08] dark:ring-white/[0.08] p-3 flex items-center gap-4">
@@ -71,14 +115,18 @@ export function PlayerControls({
 
       <div className="flex-1 flex flex-col gap-1.5">
         <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
-          <span className="font-mono">{Math.round(throttledPlayheadMs)}ms</span>
+          <span className="font-mono">{Math.round(displayPlayheadMs)}ms</span>
           <span className="font-mono">{Math.round(totalMs)}ms</span>
         </div>
         <Slider
-          value={[playheadMs]}
+          value={[displayPlayheadMs]}
           max={Math.max(1, totalMs)}
           step={1}
-          onValueChange={([value]) => onSeek(value)}
+          onValueChange={([value]) => {
+            displayPlayheadRef.current = value;
+            setDisplayPlayheadMs(value);
+            onSeek(value);
+          }}
           disabled={disabled}
           className="py-1"
           noThumb

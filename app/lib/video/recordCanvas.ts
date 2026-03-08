@@ -3,8 +3,19 @@ export type RecordCanvasOptions = {
   fps: number;
   mimeTypePreference?: string[];
   onProgress?: (elapsedMs: number, totalMs: number) => void;
-  onFrame?: (elapsedMs: number) => void;
+  onFrame?: (requestedFrameMs: number) => void;
 };
+
+export function buildFrameTimestamps(durationMs: number, fps: number): number[] {
+  if (durationMs <= 0 || fps <= 0) return [];
+
+  const frameDurationMs = 1000 / fps;
+  const totalFrames = Math.max(1, Math.ceil(durationMs / frameDurationMs));
+
+  return Array.from({ length: totalFrames }, (_, index) => (
+    Math.min(durationMs, (index + 1) * frameDurationMs)
+  ));
+}
 
 function pickMimeType(
   preference: string[] | undefined,
@@ -40,6 +51,8 @@ export async function recordCanvasToWebm(opts: RecordCanvasOptions & { durationM
   };
 
   const startedAt = performance.now();
+  const frameTimestamps = buildFrameTimestamps(opts.durationMs, opts.fps);
+  let frameIndex = 0;
 
   const done = new Promise<Blob>((resolve, reject) => {
     recorder.onerror = () => reject(new Error("Recording failed"));
@@ -58,10 +71,12 @@ export async function recordCanvasToWebm(opts: RecordCanvasOptions & { durationM
   await new Promise<void>((resolve) => {
     const tick = () => {
       const now = performance.now();
-      const elapsed = Math.min(opts.durationMs, now - startedAt);
+      const requestedFrameMs = frameTimestamps[frameIndex] ?? opts.durationMs;
+
       // Render frame BEFORE progress update so captureStream gets the new content
-      opts.onFrame?.(elapsed);
-      opts.onProgress?.(elapsed, opts.durationMs);
+      opts.onFrame?.(requestedFrameMs);
+      opts.onProgress?.(requestedFrameMs, opts.durationMs);
+      frameIndex++;
       if (now >= stopAt) {
         recorder.stop();
         resolve();

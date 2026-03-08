@@ -2,6 +2,8 @@ import type { CanvasLayoutConfig, LayoutResult, RenderTheme } from "./codeLayout
 import type { AnimatedRegionHighlight, AnimatedToken } from "./animate";
 import {
   type BackgroundTheme,
+  createBackgroundLayerCanvas,
+  createBackgroundLayerCacheKey,
   drawBackgroundGradient,
   drawCardShadow,
 } from "./backgroundThemes";
@@ -92,10 +94,13 @@ export function drawCodeFrame(opts: {
   cursor?: { x: number; y: number; color: string } | null;
   // Optional background theme (gradient behind the code card)
   backgroundTheme?: BackgroundTheme | null;
+  backgroundLayer?: CanvasImageSource | null;
+  scaleSnapThreshold?: number;
 }) {
   const { ctx, config, layout } = opts;
   const bgPad = config.backgroundPadding;
   const hasBackground = bgPad > 0 && opts.backgroundTheme;
+  const scaleSnapThreshold = opts.scaleSnapThreshold ?? 0.001;
 
   // Total canvas size = card + background padding on each side
   const totalW = config.canvasWidth + bgPad * 2;
@@ -106,23 +111,27 @@ export function drawCodeFrame(opts: {
 
   // 2. If background theme present: draw gradient on full canvas
   if (hasBackground) {
-    drawBackgroundGradient({
-      ctx,
-      theme: opts.backgroundTheme!,
-      width: totalW,
-      height: totalH,
-      cornerRadius: 16,
-    });
+    if (opts.backgroundLayer) {
+      ctx.drawImage(opts.backgroundLayer, 0, 0);
+    } else {
+      drawBackgroundGradient({
+        ctx,
+        theme: opts.backgroundTheme!,
+        width: totalW,
+        height: totalH,
+        cornerRadius: 16,
+      });
 
-    // Draw a subtle shadow behind the code card
-    drawCardShadow({
-      ctx,
-      x: bgPad,
-      y: bgPad,
-      width: config.canvasWidth,
-      height: config.canvasHeight,
-      cornerRadius: 16,
-    });
+      // Draw a subtle shadow behind the code card
+      drawCardShadow({
+        ctx,
+        x: bgPad,
+        y: bgPad,
+        width: config.canvasWidth,
+        height: config.canvasHeight,
+        cornerRadius: 16,
+      });
+    }
   }
 
   // 3. Offset into the card area
@@ -286,7 +295,7 @@ export function drawCodeFrame(opts: {
 
     const scale = t.scale ?? 1;
 
-    if (Math.abs(scale - 1) < 0.001) {
+    if (Math.abs(scale - 1) < scaleSnapThreshold) {
       ctx.globalAlpha = opacity;
       ctx.fillStyle = t.color;
       ctx.fillText(t.content, t.x, t.y);
@@ -317,4 +326,44 @@ export function drawCodeFrame(opts: {
   // Restore translate (background offset)
   ctx.restore();
   ctx.globalAlpha = 1;
+}
+
+export function buildBackgroundLayer(opts: {
+  theme: BackgroundTheme | null;
+  config: Pick<CanvasLayoutConfig, "canvasWidth" | "canvasHeight" | "backgroundPadding">;
+  cornerRadius?: number;
+}): { key: string; canvas: HTMLCanvasElement } | null {
+  const { theme, config } = opts;
+  const bgPad = config.backgroundPadding;
+  if (!theme || bgPad <= 0) {
+    return null;
+  }
+
+  const cornerRadius = opts.cornerRadius ?? 16;
+  const totalW = config.canvasWidth + bgPad * 2;
+  const totalH = config.canvasHeight + bgPad * 2;
+  const key = createBackgroundLayerCacheKey({
+    themeId: theme.id,
+    width: totalW,
+    height: totalH,
+    cardX: bgPad,
+    cardY: bgPad,
+    cardWidth: config.canvasWidth,
+    cardHeight: config.canvasHeight,
+    cornerRadius,
+  });
+
+  return {
+    key,
+    canvas: createBackgroundLayerCanvas({
+      theme,
+      width: totalW,
+      height: totalH,
+      cardX: bgPad,
+      cardY: bgPad,
+      cardWidth: config.canvasWidth,
+      cardHeight: config.canvasHeight,
+      cornerRadius,
+    }),
+  };
 }
