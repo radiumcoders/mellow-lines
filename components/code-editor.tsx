@@ -127,7 +127,10 @@ export function CodeEditor({
             height: maxHeight,
             maxHeight,
           }}
-          className="relative z-10 block w-full p-4 m-0 bg-transparent text-transparent selection:bg-white/30 selection:text-transparent resize-none outline-none border-none rounded-none font-mono text-sm leading-relaxed whitespace-pre-wrap break-words placeholder:text-muted-foreground/50 focus:ring-0 overflow-auto"
+          className={cn(
+            "relative z-10 block w-full p-4 m-0 bg-transparent text-transparent selection:text-transparent resize-none outline-none border-none rounded-none font-mono text-sm leading-relaxed whitespace-pre-wrap break-words placeholder:text-muted-foreground/50 focus:ring-0 overflow-auto",
+            variant === "dark" ? "selection:bg-white/30" : "selection:bg-black/20",
+          )}
         />
       </div>
     </div>
