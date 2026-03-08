@@ -39,7 +39,7 @@ const TOKEN_FLOW_PRESET_META: Record<TokenFlowPreset, {
     summary: "Balanced default with smooth, polished motion that feels premium without distraction.",
   },
   cinematic: {
-    summary: "Broader, expressive motion with added emphasis for demos, showcases, and storytelling.",
+    summary: "Broader, expressive motion with emphasis on demos, showcases, and storytelling.",
   },
 };
 
