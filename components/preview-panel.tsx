@@ -3,7 +3,7 @@
 import { ResizablePanel } from "@/components/ui/resizable";
 import { CanvasPreview } from "./canvas-preview";
 import { PlayerControls } from "./player-controls";
-import type { AnimationType } from "@/app/lib/magicMove/types";
+import type { AnimationType, TokenFlowPreset } from "@/app/lib/magicMove/types";
 import type { RenderTheme } from "@/app/lib/magicMove/codeLayout";
 
 interface PreviewPanelProps {
@@ -29,6 +29,8 @@ interface PreviewPanelProps {
   onFilenameChange: (value: string) => void;
   animationType: AnimationType;
   onAnimationTypeChange: (value: AnimationType) => void;
+  tokenFlowPreset: TokenFlowPreset;
+  onTokenFlowPresetChange: (value: TokenFlowPreset) => void;
   typingWpm: number;
   onTypingWpmChange: (value: number) => void;
   naturalFlow: boolean;
@@ -66,6 +68,8 @@ export function PreviewPanel({
   onFilenameChange,
   animationType,
   onAnimationTypeChange,
+  tokenFlowPreset,
+  onTokenFlowPresetChange,
   typingWpm,
   onTypingWpmChange,
   naturalFlow,
@@ -94,6 +98,8 @@ export function PreviewPanel({
         onFilenameChange={onFilenameChange}
         animationType={animationType}
         onAnimationTypeChange={onAnimationTypeChange}
+        tokenFlowPreset={tokenFlowPreset}
+        onTokenFlowPresetChange={onTokenFlowPresetChange}
         naturalFlow={naturalFlow}
         onNaturalFlowChange={onNaturalFlowChange}
         typingWpm={typingWpm}

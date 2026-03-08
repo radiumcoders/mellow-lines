@@ -6,6 +6,8 @@ import { nanoid } from "nanoid";
 import { useDefaultCodeTheme } from "../lib/useDefaultCodeTheme";
 import { animateLayouts } from "../lib/magicMove/animate";
 import { drawCodeFrame } from "../lib/magicMove/canvasRenderer";
+import { buildTokenFlowTransitionPlan, type TokenFlowStep, type TokenFlowTransitionPlan } from "../lib/magicMove/tokenFlowPlan";
+import { getTokenFlowStyle, type TokenFlowStyle } from "../lib/magicMove/tokenFlowPresets";
 import { animateTyping, computeChangedChars } from "../lib/typing/animateTyping";
 import {
   calculateCanvasHeight,
@@ -21,9 +23,8 @@ import {
   getThemeVariant,
   shikiTokenizeToLines,
   type ShikiThemeChoice,
-  type TokenLine,
 } from "../lib/magicMove/shikiHighlighter";
-import type { AnimationType, Step, SimpleStep } from "../lib/magicMove/types";
+import type { AnimationType, Step, SimpleStep, TokenFlowPreset } from "../lib/magicMove/types";
 import { recordCanvasToWebm } from "../lib/video/recordCanvas";
 import { convertWebmToMp4, terminateFFmpeg } from "../lib/video/converter";
 import { DEFAULT_STEPS } from "../lib/constants";
@@ -34,7 +35,7 @@ import { ResizableHandle, ResizablePanelGroup } from "@/components/ui/resizable"
 import { StepsEditor } from "@/components/steps-editor";
 import { PreviewPanel } from "@/components/preview-panel";
 
-type StepLayout = {
+type StepLayout = TokenFlowStep & {
   layout: LayoutResult;
   tokenLineCount: number;
   startLine: number;
@@ -50,6 +51,7 @@ const CURSOR_BLINK_MS = 530;
 
 function createEmptyLayout(reference: StepLayout): StepLayout {
   return {
+    code: "",
     layout: {
       tokens: [],
       bg: reference.layout.bg,
@@ -58,6 +60,7 @@ function createEmptyLayout(reference: StepLayout): StepLayout {
       tokenLineCount: 0,
     },
     tokenLineCount: 0,
+    tokenLines: [],
     startLine: reference.startLine,
     showLineNumbers: reference.showLineNumbers,
   };
@@ -85,11 +88,13 @@ function renderTimeline(opts: {
   title?: string;
   naturalFlow?: boolean;
   backgroundTheme?: BackgroundTheme | null;
+  tokenFlowPlans?: TokenFlowTransitionPlan[] | null;
+  tokenFlowStyle?: TokenFlowStyle;
 }): void {
   const {
     ctx, config, layouts, codes, timeline, ms, themeVariant,
     charWidth, isTyping, transitionMs, typingDurations, title, naturalFlow,
-    backgroundTheme,
+    backgroundTheme, tokenFlowPlans, tokenFlowStyle,
   } = opts;
 
   const clampMs = Math.max(0, Math.min(timeline.totalMs, ms));
@@ -163,10 +168,27 @@ function renderTimeline(opts: {
           backgroundTheme,
         });
       } else {
-        const animated = animateLayouts({ from: a.layout, to: b.layout, progress });
+        const animated = tokenFlowPlans?.[i] && tokenFlowStyle
+          ? animateLayouts({
+            plan: tokenFlowPlans[i]!,
+            progress,
+            style: tokenFlowStyle,
+            backgroundColor: b.layout.bg,
+          })
+          : {
+            tokens: b.layout.tokens.map((token) => ({
+              content: token.content,
+              color: token.color,
+              x: token.x,
+              y: token.y,
+              opacity: 1,
+            })),
+            regionHighlights: [],
+          };
         drawCodeFrame({
           ctx, config, layout: b.layout, theme: themeVariant,
-          tokens: animated,
+          tokens: animated.tokens,
+          regionHighlights: animated.regionHighlights,
           showLineNumbers: a.showLineNumbers || b.showLineNumbers,
           startLine: b.startLine,
           lineCount: Math.max(a.tokenLineCount, b.tokenLineCount),
@@ -213,6 +235,7 @@ export default function Home() {
   const [endHoldMs, setEndHoldMs] = useState<number>(500);
   const [filename, setFilename] = useState<string>("");
   const [animationType, setAnimationType] = useState<AnimationType>("typing");
+  const [tokenFlowPreset, setTokenFlowPreset] = useState<TokenFlowPreset>("studio");
   const [typingWpm, setTypingWpm] = useState<number>(120);
   const [naturalFlow, setNaturalFlow] = useState<boolean>(true);
   const [soundEnabled, setSoundEnabled] = useState(false);
@@ -226,6 +249,7 @@ export default function Home() {
   const activeBackgroundTheme = backgroundThemeId !== "none"
     ? getBackgroundThemeById(backgroundThemeId) ?? null
     : null;
+  const themeVariant = getThemeVariant(theme);
 
   // Compute steps from simple mode
   const steps = useMemo<Step[]>(() => {
@@ -245,15 +269,6 @@ export default function Home() {
     height: 1080,
   });
   const [layoutError, setLayoutError] = useState<string | null>(null);
-
-  // Store tokenized data for reuse in export
-  type StepTokenData = {
-    lines: TokenLine[];
-    bg: string;
-    showLineNumbers: boolean;
-    startLine: number;
-  };
-  const stepTokenDataRef = useRef<StepTokenData[] | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [playheadMs, setPlayheadMs] = useState(0);
@@ -318,6 +333,7 @@ export default function Home() {
       const charWidth = ctx.measureText("M").width;
 
       type StepData = {
+        code: string;
         lines: Awaited<ReturnType<typeof shikiTokenizeToLines>>["lines"];
         bg: string;
         showLineNumbers: boolean;
@@ -333,6 +349,7 @@ export default function Home() {
           theme,
         });
         stepData.push({
+          code: step.code,
           lines,
           bg,
           showLineNumbers: step.meta.lines,
@@ -393,14 +410,16 @@ export default function Home() {
           ctx,
           tokenLines: data.lines,
           bg: data.bg,
-          theme: getThemeVariant(theme),
+          theme: themeVariant,
           config: cfg,
           gutterWidthOverride: maxGutterWidth,
         });
 
         nextLayouts.push({
+          code: data.code,
           layout,
           tokenLineCount: data.lines.length,
+          tokenLines: data.lines,
           startLine: cfg.startLine,
           showLineNumbers: cfg.showLineNumbers,
         });
@@ -416,8 +435,6 @@ export default function Home() {
         height: maxHeight + bgPad * 2,
       });
       setStepLayouts(nextLayouts);
-      // Store tokenized data for potential use in export
-      stepTokenDataRef.current = stepData;
     })().catch((e: unknown) => {
       if (cancelled) return;
       setLayoutError(e instanceof Error ? e.message : "Failed to build preview");
@@ -426,7 +443,7 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [steps, theme, backgroundThemeId, backgroundPaddingPx]);
+  }, [steps, theme, themeVariant, backgroundThemeId, backgroundPaddingPx]);
 
   // For typing mode: prepend a virtual empty step so the first transition types from scratch
   const effectiveStepLayouts = useMemo(() => {
@@ -435,13 +452,31 @@ export default function Home() {
     return [createEmptyLayout(stepLayouts[0]!), ...stepLayouts];
   }, [stepLayouts, animationType]);
 
+  const tokenFlowStyle = useMemo(
+    () => getTokenFlowStyle(tokenFlowPreset, themeVariant),
+    [tokenFlowPreset, themeVariant],
+  );
+
+  const tokenFlowPlans = useMemo(() => {
+    if (animationType !== "token-flow" || !effectiveStepLayouts || effectiveStepLayouts.length <= 1) {
+      return null;
+    }
+
+    return effectiveStepLayouts.slice(0, -1).map((from, index) => (
+      buildTokenFlowTransitionPlan({
+        from,
+        to: effectiveStepLayouts[index + 1]!,
+      })
+    ));
+  }, [animationType, effectiveStepLayouts]);
+
   // Clear outdated download URL when settings change
   useEffect(() => {
     if (downloadUrl) {
       URL.revokeObjectURL(downloadUrl);
       setDownloadUrl(null);
     }
-  }, [steps, theme, fps, transitionMs, startHoldMs, betweenHoldMs, endHoldMs, animationType, typingWpm, naturalFlow, backgroundThemeId, backgroundPaddingPx]); // Only those that affect the video content
+  }, [steps, theme, fps, transitionMs, startHoldMs, betweenHoldMs, endHoldMs, animationType, tokenFlowPreset, typingWpm, naturalFlow, backgroundThemeId, backgroundPaddingPx]); // Only those that affect the video content
 
   const renderAt = useCallback(
     (ms: number, overrideDimensions?: CanvasDimensions) => {
@@ -476,16 +511,18 @@ export default function Home() {
         codes: effectiveStepCodes,
         timeline,
         ms,
-        themeVariant: getThemeVariant(theme),
+        themeVariant,
         charWidth: previewCharWidthRef.current,
         isTyping: animationType === "typing",
         transitionMs,
         typingDurations: typingTransitionDurations,
         naturalFlow,
         backgroundTheme: activeBackgroundTheme,
+        tokenFlowPlans,
+        tokenFlowStyle,
       });
     },
-    [effectiveStepLayouts, effectiveStepCodes, animationType, theme, timeline, transitionMs, typingTransitionDurations, canvasDimensions, naturalFlow, activeBackgroundTheme],
+    [effectiveStepLayouts, effectiveStepCodes, animationType, themeVariant, timeline, transitionMs, typingTransitionDurations, canvasDimensions, naturalFlow, activeBackgroundTheme, tokenFlowPlans, tokenFlowStyle],
   );
 
   useEffect(() => {
@@ -571,7 +608,7 @@ export default function Home() {
   };
 
   const onExport = async (format: "webm" | "mp4") => {
-    if (!stepTokenDataRef.current || stepTokenDataRef.current.length === 0) return;
+    if (!stepLayouts || stepLayouts.length === 0) return;
 
     setIsExporting(true);
     setExportPhase("recording");
@@ -591,8 +628,8 @@ export default function Home() {
 
     // Calculate max gutter width across all steps for consistent token positioning
     const maxDigits = Math.max(
-      ...stepTokenDataRef.current.map((data) => {
-        const lineCount = data.lines.length;
+      ...stepLayouts.map((data) => {
+        const lineCount = data.tokenLines.length;
         const lastLineNumber = data.startLine + Math.max(0, lineCount - 1);
         return String(lastLineNumber).length;
       }),
@@ -602,9 +639,9 @@ export default function Home() {
       : 0;
 
     // Calculate dimensions for each step using export config
-    const stepDimensions = stepTokenDataRef.current.map((data) => {
+    const stepDimensions = stepLayouts.map((data) => {
       const requiredWidth = calculateCanvasWidth({
-        tokenLines: data.lines,
+        tokenLines: data.tokenLines,
         charWidth,
         paddingX: exportCfg.paddingX,
         gutterWidth: maxGutterWidth, // Use max gutter width for consistent positioning
@@ -612,7 +649,7 @@ export default function Home() {
       });
 
       const requiredHeight = calculateCanvasHeight({
-        lineCount: data.lines.length,
+        lineCount: data.tokenLines.length,
         lineHeight: exportCfg.lineHeight,
         paddingY: exportCfg.paddingY,
         titleBarHeight: exportCfg.titleBarHeight,
@@ -637,7 +674,7 @@ export default function Home() {
 
     // Compute export layouts with content-sized dimensions (card size, not total)
     const exportLayouts: StepLayout[] = [];
-    for (const data of stepTokenDataRef.current) {
+    for (const data of stepLayouts) {
       const cfg = makeDefaultLayoutConfig();
       cfg.canvasWidth = cardWidth;
       cfg.canvasHeight = cardHeight;
@@ -646,16 +683,18 @@ export default function Home() {
 
       const layout = layoutTokenLinesToCanvas({
         ctx,
-        tokenLines: data.lines,
-        bg: data.bg,
-        theme: getThemeVariant(theme),
+        tokenLines: data.tokenLines,
+        bg: data.layout.bg,
+        theme: themeVariant,
         config: cfg,
         gutterWidthOverride: maxGutterWidth,
       });
 
       exportLayouts.push({
+        code: data.code,
         layout,
-        tokenLineCount: data.lines.length,
+        tokenLineCount: data.tokenLines.length,
+        tokenLines: data.tokenLines,
         startLine: cfg.startLine,
         showLineNumbers: cfg.showLineNumbers,
       });
@@ -677,7 +716,16 @@ export default function Home() {
 
     const exportStepCodes = animationType === "typing"
       ? ["", ...steps.map((s) => s.code)]
-      : steps.map((s) => s.code);
+      : exportLayouts.map((layout) => layout.code);
+
+    const exportTokenFlowPlans = animationType === "token-flow"
+      ? exportLayouts.slice(0, -1).map((from, index) => (
+        buildTokenFlowTransitionPlan({
+          from,
+          to: exportLayouts[index + 1]!,
+        })
+      ))
+      : null;
 
     const exportTypingDurations = animationType === "typing"
       ? exportStepCodes.slice(0, -1).map((fromCode, i) => {
@@ -699,7 +747,7 @@ export default function Home() {
         codes: exportStepCodes,
         timeline,
         ms,
-        themeVariant: getThemeVariant(theme),
+        themeVariant,
         charWidth,
         isTyping: animationType === "typing",
         transitionMs,
@@ -707,6 +755,8 @@ export default function Home() {
         title: filename,
         naturalFlow,
         backgroundTheme: activeBackgroundTheme,
+        tokenFlowPlans: exportTokenFlowPlans,
+        tokenFlowStyle,
       });
     };
 
@@ -838,11 +888,13 @@ export default function Home() {
             setAnimationType(type);
             if (type === "token-flow" && transitionMs > 5000) setTransitionMs(700);
           }}
+          tokenFlowPreset={tokenFlowPreset}
+          onTokenFlowPresetChange={setTokenFlowPreset}
           typingWpm={typingWpm}
           onTypingWpmChange={setTypingWpm}
           naturalFlow={naturalFlow}
           onNaturalFlowChange={setNaturalFlow}
-          themeVariant={getThemeVariant(theme)}
+          themeVariant={themeVariant}
           soundEnabled={soundEnabled}
           onSoundToggle={() => setSoundEnabled((v) => !v)}
           backgroundPadding={activeBackgroundTheme ? backgroundPaddingPx : 0}

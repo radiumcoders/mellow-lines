@@ -16,6 +16,8 @@ export type SimpleStep = {
 
 export type AnimationType = "typing" | "token-flow";
 
+export type TokenFlowPreset = "precise" | "studio" | "cinematic";
+
 export type TimelineInfo = {
   totalMs: number;
   startHold: number;
