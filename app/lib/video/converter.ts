@@ -1,15 +1,10 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
+import type { RenderedFrame } from "./frameSequence";
 
 let ffmpeg: FFmpeg | null = null;
 
-export async function convertWebmToMp4(
-  webmBlob: Blob,
-  onProgress?: (progress: number) => void,
-  totalDurationMs?: number,
-  audioBlob?: Blob,
-): Promise<Blob> {
-  // Lazy init
+async function ensureFFmpeg(): Promise<FFmpeg> {
   if (!ffmpeg) {
     ffmpeg = new FFmpeg();
 
@@ -25,13 +20,15 @@ export async function convertWebmToMp4(
     }
   }
 
-  const inputName = "input.webm";
-  const audioName = "audio.wav";
-  const outputName = "output.mp4";
+  return ffmpeg;
+}
 
-  const progressHandler = ({ progress, time }: { progress: number; time: number }) => {
+function createProgressHandler(
+  onProgress: ((progress: number) => void) | undefined,
+  totalDurationMs?: number,
+) {
+  return ({ progress, time }: { progress: number; time: number }) => {
     let p = progress;
-    // If progress is garbage (can happen with MediaRecorder WebM), fallback to time-based
     if (typeof p !== "number" || p < 0 || p > 1) {
       if (totalDurationMs && totalDurationMs > 0) {
         p = time / 1000 / totalDurationMs;
@@ -41,15 +38,60 @@ export async function convertWebmToMp4(
     }
     onProgress?.(Math.max(0, Math.min(1, p)));
   };
+}
 
-  ffmpeg.on("progress", progressHandler);
+function toOutputBlob(data: Uint8Array | string | ArrayLike<number>, type: string): Blob {
+  let uint8Array: Uint8Array;
+  if (data instanceof Uint8Array) {
+    uint8Array = new Uint8Array(data.buffer.slice(0));
+  } else if (typeof data === "string") {
+    const binaryString = atob(data);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    uint8Array = bytes;
+  } else {
+    uint8Array = new Uint8Array(data as ArrayLike<number>);
+  }
+
+  return new Blob([uint8Array as BlobPart], { type });
+}
+
+async function writeFrameSequence(ffmpegInstance: FFmpeg, frames: RenderedFrame[]) {
+  for (const frame of frames) {
+    await ffmpegInstance.writeFile(frame.name, await fetchFile(frame.blob));
+  }
+}
+
+async function deleteFiles(ffmpegInstance: FFmpeg, fileNames: string[]) {
+  for (const fileName of fileNames) {
+    try {
+      await ffmpegInstance.deleteFile(fileName);
+    } catch {}
+  }
+}
+
+export async function convertWebmToMp4(
+  webmBlob: Blob,
+  onProgress?: (progress: number) => void,
+  totalDurationMs?: number,
+  audioBlob?: Blob,
+): Promise<Blob> {
+  const ffmpegInstance = await ensureFFmpeg();
+
+  const inputName = "input.webm";
+  const audioName = "audio.wav";
+  const outputName = "output.mp4";
+  const progressHandler = createProgressHandler(onProgress, totalDurationMs);
+
+  ffmpegInstance.on("progress", progressHandler);
 
   try {
-    // Write input (use fetchFile for memory efficiency)
-    await ffmpeg.writeFile(inputName, await fetchFile(webmBlob));
+    await ffmpegInstance.writeFile(inputName, await fetchFile(webmBlob));
 
     if (audioBlob) {
-      await ffmpeg.writeFile(audioName, await fetchFile(audioBlob));
+      await ffmpegInstance.writeFile(audioName, await fetchFile(audioBlob));
     }
 
     // Convert with H.264, optionally muxing audio
@@ -78,50 +120,115 @@ export async function convertWebmToMp4(
           outputName,
         ];
 
-    await ffmpeg.exec(args);
+    await ffmpegInstance.exec(args);
 
-    // Read output
-    const data = await ffmpeg.readFile(outputName);
-
-    // Cleanup
-    await ffmpeg.deleteFile(inputName);
-    await ffmpeg.deleteFile(outputName);
-    if (audioBlob) {
-      try { await ffmpeg.deleteFile(audioName); } catch (e) { console.warn("Failed to clean up audio file:", e); }
-    }
-
-    // Convert FileData to BlobPart
-    // FFmpeg's readFile returns Uint8Array, but we need to ensure it's compatible with Blob
-    let uint8Array: Uint8Array;
-    if (data instanceof Uint8Array) {
-      // Create a new Uint8Array from the buffer to ensure ArrayBuffer compatibility
-      uint8Array = new Uint8Array(data.buffer.slice(0));
-    } else if (typeof data === "string") {
-      // If it's a string (base64), convert it
-      const binaryString = atob(data);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      uint8Array = bytes;
-    } else {
-      // Fallback: try to convert to Uint8Array
-      uint8Array = new Uint8Array(data as ArrayLike<number>);
-    }
-    // Type assertion needed because FFmpeg's Uint8Array has ArrayBufferLike, but Blob accepts it at runtime
-    return new Blob([uint8Array as BlobPart], { type: "video/mp4" });
+    const data = await ffmpegInstance.readFile(outputName);
+    return toOutputBlob(data, "video/mp4");
   } catch (error) {
-    // Cleanup on error
-    try {
-      await ffmpeg.deleteFile(inputName);
-      await ffmpeg.deleteFile(outputName);
-      if (audioBlob) await ffmpeg.deleteFile(audioName);
-    } catch {}
     throw new Error(`MP4 conversion failed: ${error}`);
   } finally {
-    if (ffmpeg) {
-      ffmpeg.off("progress", progressHandler);
+    await deleteFiles(ffmpegInstance, [inputName, outputName, ...(audioBlob ? [audioName] : [])]);
+    ffmpegInstance.off("progress", progressHandler);
+  }
+}
+
+export async function encodeFrameSequenceToWebm(opts: {
+  frames: RenderedFrame[];
+  fps: number;
+  durationMs: number;
+  onProgress?: (progress: number) => void;
+}): Promise<Blob> {
+  const ffmpegInstance = await ensureFFmpeg();
+  const outputName = "output.webm";
+  const progressHandler = createProgressHandler(opts.onProgress, opts.durationMs);
+  const cleanupFiles = [...opts.frames.map((frame) => frame.name), outputName];
+
+  ffmpegInstance.on("progress", progressHandler);
+
+  try {
+    await writeFrameSequence(ffmpegInstance, opts.frames);
+    await ffmpegInstance.exec([
+      "-framerate", String(opts.fps),
+      "-start_number", "0",
+      "-i", "frame-%06d.png",
+      "-c:v", "libvpx-vp9",
+      "-pix_fmt", "yuv420p",
+      "-crf", "30",
+      "-b:v", "0",
+      outputName,
+    ]);
+
+    const data = await ffmpegInstance.readFile(outputName);
+    return toOutputBlob(data, "video/webm");
+  } catch (error) {
+    throw new Error(`WebM encoding failed: ${error}`);
+  } finally {
+    await deleteFiles(ffmpegInstance, cleanupFiles);
+    ffmpegInstance.off("progress", progressHandler);
+  }
+}
+
+export async function encodeFrameSequenceToMp4(opts: {
+  frames: RenderedFrame[];
+  fps: number;
+  durationMs: number;
+  audioBlob?: Blob;
+  onProgress?: (progress: number) => void;
+}): Promise<Blob> {
+  const ffmpegInstance = await ensureFFmpeg();
+  const outputName = "output.mp4";
+  const audioName = "audio.wav";
+  const cleanupFiles = [...opts.frames.map((frame) => frame.name), outputName];
+  const progressHandler = createProgressHandler(opts.onProgress, opts.durationMs);
+  const durationSec = (opts.durationMs / 1000).toFixed(3);
+
+  ffmpegInstance.on("progress", progressHandler);
+
+  try {
+    await writeFrameSequence(ffmpegInstance, opts.frames);
+    if (opts.audioBlob) {
+      await ffmpegInstance.writeFile(audioName, await fetchFile(opts.audioBlob));
+      cleanupFiles.push(audioName);
     }
+
+    const args = opts.audioBlob
+      ? [
+          "-framerate", String(opts.fps),
+          "-start_number", "0",
+          "-i", "frame-%06d.png",
+          "-i", audioName,
+          "-filter_complex", "[1:a]apad[aout]",
+          "-map", "0:v:0",
+          "-map", "[aout]",
+          "-c:v", "libx264",
+          "-preset", "medium",
+          "-crf", "18",
+          "-pix_fmt", "yuv420p",
+          "-c:a", "aac",
+          "-b:a", "128k",
+          "-t", durationSec,
+          outputName,
+        ]
+      : [
+          "-framerate", String(opts.fps),
+          "-start_number", "0",
+          "-i", "frame-%06d.png",
+          "-c:v", "libx264",
+          "-preset", "medium",
+          "-crf", "18",
+          "-pix_fmt", "yuv420p",
+          "-an",
+          outputName,
+        ];
+
+    await ffmpegInstance.exec(args);
+    const data = await ffmpegInstance.readFile(outputName);
+    return toOutputBlob(data, "video/mp4");
+  } catch (error) {
+    throw new Error(`MP4 encoding failed: ${error}`);
+  } finally {
+    await deleteFiles(ffmpegInstance, cleanupFiles);
+    ffmpegInstance.off("progress", progressHandler);
   }
 }
 

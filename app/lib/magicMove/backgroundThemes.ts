@@ -43,6 +43,21 @@ export type BackgroundTheme = {
   layers: GradientLayer[];
 };
 
+export type BackgroundLayerCanvasOptions = {
+  theme: BackgroundTheme;
+  width: number;
+  height: number;
+  cardX: number;
+  cardY: number;
+  cardWidth: number;
+  cardHeight: number;
+  cornerRadius: number;
+};
+
+export type BackgroundLayerCacheKeyOptions = Omit<BackgroundLayerCanvasOptions, "theme"> & {
+  themeId: string;
+};
+
 // ---------- presets ----------
 
 const THEMES: BackgroundTheme[] = [
@@ -815,6 +830,30 @@ export function getAllBackgroundThemes(): BackgroundTheme[] {
   return THEMES;
 }
 
+export function createBackgroundLayerCacheKey(opts: BackgroundLayerCacheKeyOptions): string {
+  const {
+    themeId,
+    width,
+    height,
+    cardX,
+    cardY,
+    cardWidth,
+    cardHeight,
+    cornerRadius,
+  } = opts;
+
+  return [
+    themeId,
+    width,
+    height,
+    cardX,
+    cardY,
+    cardWidth,
+    cardHeight,
+    cornerRadius,
+  ].join(":");
+}
+
 // ---------- canvas drawing ----------
 
 /**
@@ -908,4 +947,34 @@ export function drawCardShadow(opts: {
   ctx.fillStyle = "#000";
   ctx.fill();
   ctx.restore();
+}
+
+export function createBackgroundLayerCanvas(opts: BackgroundLayerCanvasOptions): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+  canvas.width = opts.width;
+  canvas.height = opts.height;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("Canvas 2D not supported");
+  }
+
+  drawBackgroundGradient({
+    ctx,
+    theme: opts.theme,
+    width: opts.width,
+    height: opts.height,
+    cornerRadius: opts.cornerRadius,
+  });
+
+  drawCardShadow({
+    ctx,
+    x: opts.cardX,
+    y: opts.cardY,
+    width: opts.cardWidth,
+    height: opts.cardHeight,
+    cornerRadius: opts.cornerRadius,
+  });
+
+  return canvas;
 }

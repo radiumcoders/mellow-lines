@@ -5,7 +5,7 @@ import { nanoid } from "nanoid";
 
 import { useDefaultCodeTheme } from "../lib/useDefaultCodeTheme";
 import { animateLayouts } from "../lib/magicMove/animate";
-import { drawCodeFrame } from "../lib/magicMove/canvasRenderer";
+import { buildBackgroundLayer, drawCodeFrame } from "../lib/magicMove/canvasRenderer";
 import { buildTokenFlowTransitionPlan, type TokenFlowStep, type TokenFlowTransitionPlan } from "../lib/magicMove/tokenFlowPlan";
 import { getTokenFlowStyle, type TokenFlowStyle } from "../lib/magicMove/tokenFlowPresets";
 import { animateTyping, computeChangedChars } from "../lib/typing/animateTyping";
@@ -18,15 +18,20 @@ import {
   makePreviewLayoutConfig,
 } from "../lib/magicMove/codeLayout";
 import type { CanvasLayoutConfig, LayoutResult, RenderTheme } from "../lib/magicMove/codeLayout";
-import { getBackgroundThemeById, type BackgroundTheme } from "../lib/magicMove/backgroundThemes";
+import {
+  createBackgroundLayerCacheKey,
+  getBackgroundThemeById,
+  type BackgroundTheme,
+} from "../lib/magicMove/backgroundThemes";
+import { getPreviewPixelRatio } from "../lib/magicMove/renderPerformance";
 import {
   getThemeVariant,
   shikiTokenizeToLines,
   type ShikiThemeChoice,
 } from "../lib/magicMove/shikiHighlighter";
 import type { AnimationType, Step, SimpleStep, TokenFlowPreset } from "../lib/magicMove/types";
-import { recordCanvasToWebm } from "../lib/video/recordCanvas";
-import { convertWebmToMp4, terminateFFmpeg } from "../lib/video/converter";
+import { terminateFFmpeg, encodeFrameSequenceToMp4, encodeFrameSequenceToWebm } from "../lib/video/converter";
+import { renderCanvasFrameSequence } from "../lib/video/frameSequence";
 import { DEFAULT_STEPS } from "../lib/constants";
 import { useTypingSound } from "../lib/audio/useTypingSound";
 import { generateTypingAudioTrack } from "../lib/audio/generateTypingAudioTrack";
@@ -73,6 +78,11 @@ type TimelineInfo = {
   endHold: number;
 };
 
+type BackgroundLayerCache = {
+  key: string;
+  canvas: HTMLCanvasElement;
+};
+
 function renderTimeline(opts: {
   ctx: CanvasRenderingContext2D;
   config: CanvasLayoutConfig;
@@ -88,13 +98,15 @@ function renderTimeline(opts: {
   title?: string;
   naturalFlow?: boolean;
   backgroundTheme?: BackgroundTheme | null;
+  backgroundLayer?: CanvasImageSource | null;
   tokenFlowPlans?: TokenFlowTransitionPlan[] | null;
   tokenFlowStyle?: TokenFlowStyle;
+  scaleSnapThreshold?: number;
 }): void {
   const {
     ctx, config, layouts, codes, timeline, ms, themeVariant,
     charWidth, isTyping, transitionMs, typingDurations, title, naturalFlow,
-    backgroundTheme, tokenFlowPlans, tokenFlowStyle,
+    backgroundTheme, backgroundLayer, tokenFlowPlans, tokenFlowStyle, scaleSnapThreshold,
   } = opts;
 
   const clampMs = Math.max(0, Math.min(timeline.totalMs, ms));
@@ -121,6 +133,8 @@ function renderTimeline(opts: {
       showLineNumbers: only.showLineNumbers, startLine: only.startLine,
       lineCount: only.tokenLineCount, title, cursor: getBlinkCursor(only.layout),
       backgroundTheme,
+      backgroundLayer,
+      scaleSnapThreshold,
     });
     return;
   }
@@ -133,6 +147,8 @@ function renderTimeline(opts: {
       showLineNumbers: first.showLineNumbers, startLine: first.startLine,
       lineCount: first.tokenLineCount, title, cursor: getBlinkCursor(first.layout),
       backgroundTheme,
+      backgroundLayer,
+      scaleSnapThreshold,
     });
     return;
   }
@@ -166,6 +182,8 @@ function renderTimeline(opts: {
           startLine: b.startLine, lineCount: result.visibleLineCount, title,
           cursor: result.cursor ? { ...result.cursor, color: b.layout.fg } : undefined,
           backgroundTheme,
+          backgroundLayer,
+          scaleSnapThreshold,
         });
       } else {
         const animated = tokenFlowPlans?.[i] && tokenFlowStyle
@@ -193,7 +211,7 @@ function renderTimeline(opts: {
           startLine: b.startLine,
           lineCount: Math.max(a.tokenLineCount, b.tokenLineCount),
           prevLineCount: a.tokenLineCount, targetLineCount: b.tokenLineCount,
-          transitionProgress: progress, title, backgroundTheme,
+          transitionProgress: progress, title, backgroundTheme, backgroundLayer, scaleSnapThreshold,
         });
       }
       return;
@@ -206,6 +224,8 @@ function renderTimeline(opts: {
         showLineNumbers: b.showLineNumbers, startLine: b.startLine,
         lineCount: b.tokenLineCount, title, cursor: getBlinkCursor(b.layout),
         backgroundTheme,
+        backgroundLayer,
+        scaleSnapThreshold,
       });
       return;
     }
@@ -218,6 +238,8 @@ function renderTimeline(opts: {
     showLineNumbers: last.showLineNumbers, startLine: last.startLine,
     lineCount: last.tokenLineCount, title, cursor: getBlinkCursor(last.layout),
     backgroundTheme,
+    backgroundLayer,
+    scaleSnapThreshold,
   });
 }
 
@@ -274,9 +296,17 @@ export default function Home() {
   const [playheadMs, setPlayheadMs] = useState(0);
   const rafRef = useRef<number | null>(null);
   const lastFrameRef = useRef<number | null>(null);
+  const previewPlayheadRef = useRef(0);
+  const lastUiSyncRef = useRef<number | null>(null);
+  const previewSurfaceRef = useRef<{
+    logicalWidth: number;
+    logicalHeight: number;
+    pixelRatio: number;
+  } | null>(null);
+  const backgroundLayerRef = useRef<BackgroundLayerCache | null>(null);
 
   const [isExporting, setIsExporting] = useState(false);
-  const [exportPhase, setExportPhase] = useState<"recording" | "saving" | null>(null);
+  const [exportPhase, setExportPhase] = useState<"rendering" | "saving" | null>(null);
   const [exportProgress, setExportProgress] = useState<number>(0);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [scrollToEndTrigger, setScrollToEndTrigger] = useState(0);
@@ -486,8 +516,12 @@ export default function Home() {
       if (!ctx) return;
 
       const dims = overrideDimensions ?? canvasDimensions;
-      const PIXEL_RATIO = 2;
-      const bgPad = activeBackgroundTheme ? backgroundPaddingPx : 0;
+      const hasBackground = !!activeBackgroundTheme;
+      const pixelRatio = getPreviewPixelRatio(
+        hasBackground,
+        typeof window === "undefined" ? 1 : window.devicePixelRatio,
+      );
+      const bgPad = hasBackground ? backgroundPaddingPx : 0;
 
       const cfg = makePreviewLayoutConfig();
       // canvasWidth/Height = card dimensions (without background padding)
@@ -495,14 +529,51 @@ export default function Home() {
       cfg.canvasHeight = dims.height - bgPad * 2;
       cfg.backgroundPadding = bgPad;
 
-      // Total canvas element size includes background padding
-      const targetWidth = dims.width * PIXEL_RATIO;
-      const targetHeight = dims.height * PIXEL_RATIO;
-      canvas.width = targetWidth;
-      canvas.height = targetHeight;
-      canvas.style.width = `${dims.width}px`;
-      canvas.style.height = `${dims.height}px`;
-      ctx.setTransform(PIXEL_RATIO, 0, 0, PIXEL_RATIO, 0, 0);
+      const surface = previewSurfaceRef.current;
+      const needsResize =
+        !surface ||
+        surface.logicalWidth !== dims.width ||
+        surface.logicalHeight !== dims.height ||
+        surface.pixelRatio !== pixelRatio;
+
+      if (needsResize) {
+        canvas.width = Math.round(dims.width * pixelRatio);
+        canvas.height = Math.round(dims.height * pixelRatio);
+        canvas.style.width = `${dims.width}px`;
+        canvas.style.height = `${dims.height}px`;
+        ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        previewSurfaceRef.current = {
+          logicalWidth: dims.width,
+          logicalHeight: dims.height,
+          pixelRatio,
+        };
+      }
+
+      let backgroundLayer: HTMLCanvasElement | null = null;
+      if (activeBackgroundTheme && bgPad > 0) {
+        const backgroundLayerKey = createBackgroundLayerCacheKey({
+          themeId: activeBackgroundTheme.id,
+          width: cfg.canvasWidth + bgPad * 2,
+          height: cfg.canvasHeight + bgPad * 2,
+          cardX: bgPad,
+          cardY: bgPad,
+          cardWidth: cfg.canvasWidth,
+          cardHeight: cfg.canvasHeight,
+          cornerRadius: 16,
+        });
+        if (backgroundLayerRef.current?.key !== backgroundLayerKey) {
+          const cachedLayer = buildBackgroundLayer({
+            theme: activeBackgroundTheme,
+            config: cfg,
+          });
+          if (cachedLayer) {
+            backgroundLayerRef.current = cachedLayer;
+          }
+        }
+        backgroundLayer = backgroundLayerRef.current?.canvas ?? null;
+      } else {
+        backgroundLayerRef.current = null;
+      }
 
       renderTimeline({
         ctx,
@@ -518,23 +589,32 @@ export default function Home() {
         typingDurations: typingTransitionDurations,
         naturalFlow,
         backgroundTheme: activeBackgroundTheme,
+        backgroundLayer,
         tokenFlowPlans,
         tokenFlowStyle,
+        scaleSnapThreshold: hasBackground ? 0.01 : 0.001,
       });
     },
     [effectiveStepLayouts, effectiveStepCodes, animationType, themeVariant, timeline, transitionMs, typingTransitionDurations, canvasDimensions, naturalFlow, activeBackgroundTheme, tokenFlowPlans, tokenFlowStyle],
   );
 
   useEffect(() => {
-    if (!effectiveStepLayouts || effectiveStepLayouts.length === 0) return;
+    if (!isPlaying) {
+      previewPlayheadRef.current = Math.max(0, Math.min(timeline.totalMs, playheadMs));
+    }
+  }, [isPlaying, playheadMs, timeline.totalMs]);
+
+  useEffect(() => {
+    if (isPlaying || !effectiveStepLayouts || effectiveStepLayouts.length === 0) return;
     renderAt(playheadMs);
-  }, [playheadMs, renderAt, effectiveStepLayouts]);
+  }, [playheadMs, renderAt, effectiveStepLayouts, isPlaying]);
 
   useEffect(() => {
     if (!isPlaying) {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
       lastFrameRef.current = null;
+      lastUiSyncRef.current = null;
       return;
     }
 
@@ -542,10 +622,24 @@ export default function Home() {
       const last = lastFrameRef.current ?? now;
       lastFrameRef.current = now;
       const dt = now - last;
-      setPlayheadMs((t) => {
-        const next = t + dt;
-        return next >= timeline.totalMs ? 0 : next;
-      });
+      const next = previewPlayheadRef.current + dt;
+      const wrapped = next >= timeline.totalMs;
+      const nextPlayhead = wrapped ? 0 : next;
+      const shouldSyncEachFrame = animationType === "typing" || soundEnabled;
+
+      previewPlayheadRef.current = nextPlayhead;
+      renderAt(nextPlayhead);
+
+      if (
+        shouldSyncEachFrame ||
+        wrapped ||
+        lastUiSyncRef.current === null ||
+        now - lastUiSyncRef.current >= 66
+      ) {
+        lastUiSyncRef.current = now;
+        setPlayheadMs(nextPlayhead);
+      }
+
       rafRef.current = requestAnimationFrame(tick);
     };
 
@@ -556,7 +650,7 @@ export default function Home() {
       lastFrameRef.current = null;
       return;
     };
-  }, [isPlaying, timeline.totalMs]);
+  }, [isPlaying, timeline.totalMs, renderAt, animationType, soundEnabled]);
 
   useTypingSound({
     enabled: soundEnabled,
@@ -582,6 +676,34 @@ export default function Home() {
   }, [downloadUrl]);
 
   const canExport = !!stepLayouts && stepLayouts.length > 0;
+
+  const handleSeek = useCallback((ms: number) => {
+    previewPlayheadRef.current = ms;
+    setPlayheadMs(ms);
+    renderAt(ms);
+  }, [renderAt]);
+
+  const handleReset = useCallback(() => {
+    setIsPlaying(false);
+    previewPlayheadRef.current = 0;
+    setPlayheadMs(0);
+    lastUiSyncRef.current = null;
+    lastFrameRef.current = null;
+    renderAt(0);
+  }, [renderAt]);
+
+  const handlePlayPause = useCallback(() => {
+    if (isPlaying) {
+      setIsPlaying(false);
+      setPlayheadMs(previewPlayheadRef.current);
+      return;
+    }
+
+    previewPlayheadRef.current = playheadMs;
+    lastUiSyncRef.current = null;
+    lastFrameRef.current = null;
+    setIsPlaying(true);
+  }, [isPlaying, playheadMs]);
 
   // Simple mode handlers
   const insertSimpleStep = (atIndex?: number) => {
@@ -611,7 +733,7 @@ export default function Home() {
     if (!stepLayouts || stepLayouts.length === 0) return;
 
     setIsExporting(true);
-    setExportPhase("recording");
+    setExportPhase("rendering");
     setExportProgress(0);
     if (downloadUrl) URL.revokeObjectURL(downloadUrl);
     setDownloadUrl(null);
@@ -708,6 +830,10 @@ export default function Home() {
     finalExportCfg.canvasWidth = cardWidth;
     finalExportCfg.canvasHeight = cardHeight;
     finalExportCfg.backgroundPadding = exportBgPad;
+    const exportBackgroundLayer = buildBackgroundLayer({
+      theme: activeBackgroundTheme,
+      config: finalExportCfg,
+    })?.canvas ?? null;
 
     // For typing mode, prepend a virtual empty layout
     const effectiveExportLayouts = animationType === "typing"
@@ -755,68 +881,60 @@ export default function Home() {
         title: filename,
         naturalFlow,
         backgroundTheme: activeBackgroundTheme,
+        backgroundLayer: exportBackgroundLayer,
         tokenFlowPlans: exportTokenFlowPlans,
         tokenFlowStyle,
       });
     };
 
     const durationMs = timeline.totalMs;
-    let cancelled = false;
-
-    // Draw initial frame synchronously before starting recording
-    renderExportFrame(0);
 
     try {
-      let blob: Blob | null = await recordCanvasToWebm({
+      const renderedSequence = await renderCanvasFrameSequence({
         canvas: exportCanvas,
         fps,
         durationMs,
-        onProgress: (elapsed, total) => {
-          setExportProgress(total <= 0 ? 0 : elapsed / total);
-        },
-        // Pass render function to be called each frame from inside the recording loop
-        onFrame: (elapsed) => {
-          if (!cancelled) {
-            renderExportFrame(elapsed);
-          }
+        renderFrame: renderExportFrame,
+        onProgress: (completedFrames, totalFrames) => {
+          setExportProgress(totalFrames <= 0 ? 0 : completedFrames / totalFrames);
         },
       });
 
-      if (format === "mp4") {
-        setExportPhase("saving");
-        setExportProgress(0);
-
-        let audioBlob: Blob | undefined;
-        if (soundEnabled && animationType === "typing") {
-          audioBlob = await generateTypingAudioTrack({
-            timeline,
-            stepCount: effectiveStepCount,
-            transitionMs,
-            typingDurations: exportTypingDurations,
-          });
-        }
-
-        const mp4Blob = await convertWebmToMp4(
-          blob!,
-          (val) => {
-            setExportProgress(val);
-          },
-          durationMs,
-          audioBlob,
-        );
-        cancelled = true;
-
-        const url = URL.createObjectURL(mp4Blob);
-        setDownloadUrl(url);
-      } else {
-        cancelled = true;
-        const url = URL.createObjectURL(blob!);
-        setDownloadUrl(url);
+      if (renderedSequence.timestamps[renderedSequence.timestamps.length - 1] !== durationMs) {
+        throw new Error("Export did not render the final logical frame");
       }
 
-      blob = null; // Release WebM blob memory
+      setExportPhase("saving");
+      setExportProgress(0);
+
+      let audioBlob: Blob | undefined;
+      if (format === "mp4" && soundEnabled && animationType === "typing") {
+        audioBlob = await generateTypingAudioTrack({
+          timeline,
+          stepCount: effectiveStepCount,
+          transitionMs,
+          typingDurations: exportTypingDurations,
+        });
+      }
+
+      const finalBlob = format === "mp4"
+        ? await encodeFrameSequenceToMp4({
+          frames: renderedSequence.frames,
+          fps,
+          durationMs,
+          audioBlob,
+          onProgress: setExportProgress,
+        })
+        : await encodeFrameSequenceToWebm({
+          frames: renderedSequence.frames,
+          fps,
+          durationMs,
+          onProgress: setExportProgress,
+        });
+
+      const url = URL.createObjectURL(finalBlob);
+      setDownloadUrl(url);
     } catch (e) {
-      cancelled = true;
       setLayoutError(e instanceof Error ? e.message : "Export failed");
     } finally {
       setIsExporting(false);
@@ -864,14 +982,11 @@ export default function Home() {
           layoutError={layoutError}
           onDismissError={() => setLayoutError(null)}
           isPlaying={isPlaying}
-          onPlayPause={() => setIsPlaying(!isPlaying)}
+          onPlayPause={handlePlayPause}
           playheadMs={playheadMs}
           totalMs={timeline.totalMs}
-          onSeek={setPlayheadMs}
-          onReset={() => {
-            setIsPlaying(false);
-            setPlayheadMs(0);
-          }}
+          onSeek={handleSeek}
+          onReset={handleReset}
           stepLayouts={stepLayouts}
           transitionMs={transitionMs}
           onTransitionMsChange={setTransitionMs}
