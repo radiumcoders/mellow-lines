@@ -72,6 +72,19 @@ async function deleteFiles(ffmpegInstance: FFmpeg, fileNames: string[]) {
   }
 }
 
+export function buildGifEncodingArgs(opts: { fps: number; outputName?: string }): string[] {
+  const outputName = opts.outputName ?? "output.gif";
+
+  return [
+    "-framerate", String(opts.fps),
+    "-start_number", "0",
+    "-i", "frame-%06d.png",
+    "-vf", "split[s0][s1];[s0]palettegen=stats_mode=diff:reserve_transparent=0[p];[s1][p]paletteuse=dither=sierra2_4a",
+    "-loop", "0",
+    outputName,
+  ];
+}
+
 export async function convertWebmToMp4(
   webmBlob: Blob,
   onProgress?: (progress: number) => void,
@@ -162,6 +175,36 @@ export async function encodeFrameSequenceToWebm(opts: {
     return toOutputBlob(data, "video/webm");
   } catch (error) {
     throw new Error(`WebM encoding failed: ${error}`);
+  } finally {
+    await deleteFiles(ffmpegInstance, cleanupFiles);
+    ffmpegInstance.off("progress", progressHandler);
+  }
+}
+
+export async function encodeFrameSequenceToGif(opts: {
+  frames: RenderedFrame[];
+  fps: number;
+  durationMs: number;
+  onProgress?: (progress: number) => void;
+}): Promise<Blob> {
+  const ffmpegInstance = await ensureFFmpeg();
+  const outputName = "output.gif";
+  const progressHandler = createProgressHandler(opts.onProgress, opts.durationMs);
+  const cleanupFiles = [...opts.frames.map((frame) => frame.name), outputName];
+
+  ffmpegInstance.on("progress", progressHandler);
+
+  try {
+    await writeFrameSequence(ffmpegInstance, opts.frames);
+    await ffmpegInstance.exec(buildGifEncodingArgs({
+      fps: opts.fps,
+      outputName,
+    }));
+
+    const data = await ffmpegInstance.readFile(outputName);
+    return toOutputBlob(data, "image/gif");
+  } catch (error) {
+    throw new Error(`GIF encoding failed: ${error}`);
   } finally {
     await deleteFiles(ffmpegInstance, cleanupFiles);
     ffmpegInstance.off("progress", progressHandler);

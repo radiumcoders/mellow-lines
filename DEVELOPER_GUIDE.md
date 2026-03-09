@@ -1,6 +1,6 @@
 # Code Animation Studio — Developer Guide
 
-This app lets you create animated videos of code morphing between steps. Simply paste your code snippets for each step, configure the animation settings, and export a video (WebM or MP4).
+This app lets you create animated videos of code morphing between steps. Simply paste your code snippets for each step, configure the animation settings, and export a video or GIF (WebM, MP4, or GIF).
 
 Inspired by Slidev's "Shiki Magic Move" feature.
 
@@ -10,7 +10,7 @@ Inspired by Slidev's "Shiki Magic Move" feature.
 2. Add code steps in the left panel
 3. Configure language, theme, and timing settings
 4. Preview the animation with play/pause controls
-5. Export as WebM or MP4 with custom filename
+5. Export as WebM, MP4, or GIF with a custom filename
 
 ---
 
@@ -28,7 +28,7 @@ Inspired by Slidev's "Shiki Magic Move" feature.
   - **Location**: `app/lib/magicMove/canvasRenderer.ts`, `app/lib/magicMove/codeLayout.ts`
   - **Usage**: Draws tokens at interpolated positions during animation
 
-### Video Export
+### Export Pipeline
 
 - **MediaStream / `HTMLCanvasElement.captureStream()`** (Web API)
   - **Purpose**: Captures canvas output at specified FPS
@@ -40,9 +40,9 @@ Inspired by Slidev's "Shiki Magic Move" feature.
   - **Quality**: 10 Mbps (VP9) or 8 Mbps (VP8) for crisp text
 
 - **FFmpeg WASM** (`@ffmpeg/ffmpeg`, `@ffmpeg/util`)
-  - **Purpose**: Converts WebM to MP4 format
+  - **Purpose**: Encodes deterministic PNG frame sequences into WebM, MP4, and GIF
   - **Location**: `app/lib/video/converter.ts`
-  - **Usage**: Optional MP4 conversion for broader compatibility
+  - **Usage**: High-quality export with palette-aware GIF generation
 
 ### Build Tools
 
@@ -73,9 +73,9 @@ Inspired by Slidev's "Shiki Magic Move" feature.
 All timing parameters are user-configurable:
 
 - **Transition duration**: 100-5000ms (morphing between steps)
-- **Start hold**: Pause before first transition (default: 250ms)
-- **Between hold**: Pause between transitions (default: 120ms)
-- **End hold**: Pause after final step (default: 250ms)
+- **Start hold**: Pause before first transition (default: 500ms)
+- **Between hold**: Pause between transitions (default: 200ms)
+- **End hold**: Pause after final step (default: 500ms)
 
 **Timeline Formula**:
 ```
@@ -84,11 +84,13 @@ totalMs = startHold + (transitions × transitionMs) + (transitions × betweenHol
 
 ### Export Options
 
-- **Formats**: WebM (browser-native) or MP4 (via FFmpeg WASM)
+- **Formats**: WebM, MP4, or GIF
 - **Resolution**: 1920px width, dynamic height (min 1080px)
-- **FPS**: Configurable 10-60 FPS
+- **FPS**: Configurable 30 or 60 FPS
 - **Filename**: Custom name for the exported file
 - **Progress tracking**: Visual feedback during recording/conversion
+- **GIF timing policy**: 60 FPS projects export as 50 FPS GIFs for more reliable playback in GIF viewers
+- **GIF audio**: Not supported
 
 ---
 
@@ -118,7 +120,9 @@ totalMs = startHold + (transitions × transitionMs) + (transitions × betweenHol
 | File | Purpose |
 |------|---------|
 | `recordCanvas.ts` | MediaRecorder-based WebM capture |
-| `converter.ts` | FFmpeg WASM WebM to MP4 conversion |
+| `frameSequence.ts` | Deterministic PNG frame rendering for export |
+| `converter.ts` | FFmpeg WASM encoding for WebM, MP4, and GIF |
+| `types.ts` | Shared export types and GIF FPS policy |
 
 ### Components (`components/`)
 
@@ -174,8 +178,8 @@ totalMs = startHold + (transitions × transitionMs) + (transitions × betweenHol
     ▼         ▼
 ┌────────┐ ┌──────────┐
 │ Preview│ │  Export  │
-│ Player │ │ (WebM/   │
-│        │ │  MP4)    │
+│ Player │ │(WebM/MP4│
+│        │ │ /GIF)   │
 └────────┘ └──────────┘
 ```
 
@@ -188,18 +192,13 @@ totalMs = startHold + (transitions × transitionMs) + (transitions × betweenHol
 
 ### Export Process
 
-**WebM Export**:
-1. Set fixed canvas dimensions
-2. Render loop drives through entire timeline
-3. `canvas.captureStream(fps)` creates MediaStream
-4. MediaRecorder captures at 10 Mbps (VP9) or 8 Mbps (VP8)
-5. Blob created from chunks, download URL generated
-
-**MP4 Export** (optional):
-1. Record WebM as above
-2. Load FFmpeg WASM in browser
-3. Convert WebM to MP4 using H.264 codec
-4. Return MP4 Blob for download
+**Deterministic Export**:
+1. Set fixed export canvas dimensions
+2. Render the full timeline into a PNG frame sequence
+3. Load FFmpeg WASM in the browser
+4. Encode frames to WebM, MP4, or GIF
+5. For GIF, generate and apply a palette for better text/gradient quality
+6. Return the final Blob and create a download URL
 
 ---
 
@@ -211,13 +210,13 @@ totalMs = startHold + (transitions × transitionMs) + (transitions × betweenHol
 |---------|----------|---------|-------|
 | Language | `app/editor/page.tsx` | `typescript` | 11 languages |
 | Theme | `app/editor/page.tsx` | `vitesse-dark` | 6 themes |
-| Line numbers | `app/editor/page.tsx` | `true` | boolean |
+| Line numbers | `app/editor/page.tsx` | `false` | boolean |
 | Start line | `app/editor/page.tsx` | `1` | 1+ |
-| FPS | `app/editor/page.tsx` | `30` | 10-60 |
-| Transition duration | `app/editor/page.tsx` | `800` | 100-5000ms |
-| Start hold | `app/editor/page.tsx` | `250` | 0+ ms |
-| Between hold | `app/editor/page.tsx` | `120` | 0+ ms |
-| End hold | `app/editor/page.tsx` | `250` | 0+ ms |
+| FPS | `app/editor/page.tsx` | `60` | 30 or 60 |
+| Transition duration | `app/editor/page.tsx` | `700` | 100-5000ms |
+| Start hold | `app/editor/page.tsx` | `500` | 0+ ms |
+| Between hold | `app/editor/page.tsx` | `200` | 0+ ms |
+| End hold | `app/editor/page.tsx` | `500` | 0+ ms |
 | Canvas width | `codeLayout.ts` | `1920` | fixed |
 | Min canvas height | `codeLayout.ts` | `1080` | dynamic |
 | VP9 bitrate | `recordCanvas.ts` | `10 Mbps` | fixed |
@@ -239,11 +238,11 @@ The main editor component (~731 lines). Contains all business logic:
 - `exportFilename`, `exportFormat`: Export settings
 - `stepLayouts`: Computed token layouts
 - `isPlaying`, `playheadMs`: Playback state
-- `isExporting`, `exportProgress`, `downloadUrl`, `exportError`: Export state
+- `isExporting`, `exportProgress`, `downloadUrl`, `downloadFormat`, `exportError`: Export state
 
 **Key Functions**:
 - `renderAt(ms)`: Renders frame at specific timestamp
-- `onExport()`: Handles video export (WebM or MP4)
+- `onExport()`: Handles export for WebM, MP4, or GIF
 - Callbacks for all component interactions
 
 ### `app/lib/magicMove/types.ts`

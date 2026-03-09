@@ -9,7 +9,7 @@ https://github.com/user-attachments/assets/104d08d6-23d4-4f94-9eb7-3fb8deed9d8f
 - **Magical Transitions**: Smoothly animate code changes between multiple steps using a custom layout engine.
 - **Shiki Integration**: High-fidelity syntax highlighting powered by Shiki with support for various themes.
 - **High-Performance Rendering**: Direct-to-canvas 2D rendering ensures sharp visuals and fluid 60 FPS animations.
-- **Video Export**: Export your animations directly to high-quality MP4 or WebM formats using FFmpeg (WASM).
+- **Video Export**: Export your animations directly to high-quality MP4, WebM, or GIF formats using FFmpeg (WASM).
 - **Interactive Studio**: Real-time preview with timeline seeking, play/pause controls, and customizable transition timings.
 - **Customizable**: Toggle line numbers, adjust FPS, change themes, and more.
 
@@ -39,6 +39,13 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - **Highlighter**: [Shiki](https://shiki.style/)
 - **Graphics**: HTML5 Canvas 2D API
 - **Video Processing**: [@ffmpeg/ffmpeg](https://ffmpegwasm.netlify.app/) (WebAssembly)
+
+## Export Notes
+
+- **MP4/WebM**: Preserve the selected 30/60 FPS export setting.
+- **GIF**: Uses the same full export dimensions as video export and palette-optimized FFmpeg encoding for crisp text.
+- **GIF FPS policy**: When the editor is set to 60 FPS, GIF export intentionally encodes at 50 FPS for more consistent playback across GIF viewers.
+- **GIF audio**: Not supported.
 
 ## 📖 Learn More
 
