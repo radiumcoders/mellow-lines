@@ -30,8 +30,14 @@ import {
   type ShikiThemeChoice,
 } from "../lib/magicMove/shikiHighlighter";
 import type { AnimationType, Step, SimpleStep, TokenFlowPreset } from "../lib/magicMove/types";
-import { terminateFFmpeg, encodeFrameSequenceToMp4, encodeFrameSequenceToWebm } from "../lib/video/converter";
+import {
+  encodeFrameSequenceToGif,
+  encodeFrameSequenceToMp4,
+  encodeFrameSequenceToWebm,
+  terminateFFmpeg,
+} from "../lib/video/converter";
 import { renderCanvasFrameSequence } from "../lib/video/frameSequence";
+import { getEffectiveExportFps, type ExportFormat } from "../lib/video/types";
 import { DEFAULT_STEPS } from "../lib/constants";
 import { useTypingSound } from "../lib/audio/useTypingSound";
 import { generateTypingAudioTrack } from "../lib/audio/generateTypingAudioTrack";
@@ -309,6 +315,7 @@ export default function Home() {
   const [exportPhase, setExportPhase] = useState<"rendering" | "saving" | null>(null);
   const [exportProgress, setExportProgress] = useState<number>(0);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [downloadFormat, setDownloadFormat] = useState<ExportFormat | null>(null);
   const [scrollToEndTrigger, setScrollToEndTrigger] = useState(0);
 
   // For typing mode, we prepend a virtual empty step so the first transition types from scratch
@@ -505,11 +512,12 @@ export default function Home() {
     ));
   }, [animationType, effectiveStepLayouts]);
 
-  // Clear outdated download URL when settings change
+  // Clear outdated download URL when settings change.
   useEffect(() => {
     if (downloadUrl) {
       URL.revokeObjectURL(downloadUrl);
       setDownloadUrl(null);
+      setDownloadFormat(null);
     }
   }, [steps, theme, fps, transitionMs, startHoldMs, betweenHoldMs, endHoldMs, animationType, tokenFlowPreset, typingWpm, naturalFlow, backgroundThemeId, backgroundPaddingPx]); // Only those that affect the video content
 
@@ -734,7 +742,7 @@ export default function Home() {
     setSimpleSteps(updated);
   };
 
-  const onExport = async (format: "webm" | "mp4") => {
+  const onExport = async (format: ExportFormat) => {
     if (!stepLayouts || stepLayouts.length === 0) return;
 
     setIsExporting(true);
@@ -742,6 +750,7 @@ export default function Home() {
     setExportProgress(0);
     if (downloadUrl) URL.revokeObjectURL(downloadUrl);
     setDownloadUrl(null);
+    setDownloadFormat(null);
 
     // Create a separate offscreen canvas for export (don't use the visible preview canvas)
     const exportCanvas = document.createElement("canvas");
@@ -893,11 +902,12 @@ export default function Home() {
     };
 
     const durationMs = timeline.totalMs;
+    const effectiveExportFps = getEffectiveExportFps(format, fps);
 
     try {
       const renderedSequence = await renderCanvasFrameSequence({
         canvas: exportCanvas,
-        fps,
+        fps: effectiveExportFps,
         durationMs,
         renderFrame: renderExportFrame,
         onProgress: (completedFrames, totalFrames) => {
@@ -922,23 +932,34 @@ export default function Home() {
         });
       }
 
-      const finalBlob = format === "mp4"
-        ? await encodeFrameSequenceToMp4({
+      let finalBlob: Blob;
+      if (format === "mp4") {
+        finalBlob = await encodeFrameSequenceToMp4({
           frames: renderedSequence.frames,
-          fps,
+          fps: effectiveExportFps,
           durationMs,
           audioBlob,
           onProgress: setExportProgress,
-        })
-        : await encodeFrameSequenceToWebm({
+        });
+      } else if (format === "gif") {
+        finalBlob = await encodeFrameSequenceToGif({
           frames: renderedSequence.frames,
-          fps,
+          fps: effectiveExportFps,
           durationMs,
           onProgress: setExportProgress,
         });
+      } else {
+        finalBlob = await encodeFrameSequenceToWebm({
+          frames: renderedSequence.frames,
+          fps: effectiveExportFps,
+          durationMs,
+          onProgress: setExportProgress,
+        });
+      }
 
       const url = URL.createObjectURL(finalBlob);
       setDownloadUrl(url);
+      setDownloadFormat(format);
     } catch (e) {
       setLayoutError(e instanceof Error ? e.message : "Export failed");
     } finally {
@@ -996,6 +1017,7 @@ export default function Home() {
           transitionMs={transitionMs}
           onTransitionMsChange={setTransitionMs}
           downloadUrl={downloadUrl}
+          downloadFormat={downloadFormat}
           isExporting={isExporting}
           exportPhase={exportPhase}
           exportProgress={exportProgress}

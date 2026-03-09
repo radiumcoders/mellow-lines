@@ -5,6 +5,7 @@ import { Play, Pause, RotateCcw, Volume2, VolumeX, Download, Film } from "lucide
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { ExportFormat } from "@/app/lib/video/types";
 import { cn } from "@/lib/utils";
 
 interface PlayerControlsProps {
@@ -18,10 +19,11 @@ interface PlayerControlsProps {
   onSoundToggle: () => void;
   disabled?: boolean;
   downloadUrl: string | null;
+  downloadFormat: ExportFormat | null;
   isExporting: boolean;
   exportPhase: "rendering" | "saving" | null;
   exportProgress: number;
-  onExport: (format: "webm" | "mp4") => void;
+  onExport: (format: ExportFormat) => void;
   canExport: boolean;
   filename: string;
 }
@@ -37,6 +39,7 @@ export function PlayerControls({
   onSoundToggle,
   disabled = false,
   downloadUrl,
+  downloadFormat,
   isExporting,
   exportPhase,
   exportProgress,
@@ -44,12 +47,13 @@ export function PlayerControls({
   canExport,
   filename,
 }: PlayerControlsProps) {
-  const [format, setFormat] = useState<"webm" | "mp4">("mp4");
+  const [format, setFormat] = useState<ExportFormat>("mp4");
   const [displayPlayheadMs, setDisplayPlayheadMs] = useState(playheadMs);
   const displayPlayheadRef = useRef(playheadMs);
   const rafRef = useRef<number | null>(null);
   const lastFrameRef = useRef<number | null>(null);
   const statusText = exportPhase === "saving" ? "Preparing" : "Rendering";
+  const downloadLabel = downloadFormat === "gif" ? "Save GIF" : "Save Video";
 
   useEffect(() => {
     if (!isPlaying) {
@@ -159,36 +163,39 @@ export function PlayerControls({
         </Button>
       </div>
 
-      <div className="flex items-center gap-2 pl-1">
-        <div className="w-px h-4 bg-border/50" />
-        <Tabs
-          value={format}
-          onValueChange={(v) => setFormat(v as "webm" | "mp4")}
-          className="w-fit"
-        >
-          <TabsList variant="transparent">
-            <TabsTrigger value="mp4">MP4</TabsTrigger>
-            <TabsTrigger value="webm">WebM</TabsTrigger>
-          </TabsList>
-        </Tabs>
+      <div className="flex flex-col items-end gap-1 pl-1">
+        <div className="flex items-center gap-2">
+          <div className="w-px h-4 bg-border/50" />
+          <Tabs
+            value={format}
+            onValueChange={(v) => setFormat(v as ExportFormat)}
+            className="w-fit"
+          >
+            <TabsList variant="transparent">
+              <TabsTrigger value="mp4">MP4</TabsTrigger>
+              <TabsTrigger value="webm">WebM</TabsTrigger>
+              <TabsTrigger value="gif">GIF</TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-        {downloadUrl && (
-          <Button variant="outline" size="sm" asChild className="gap-2">
-            <a href={downloadUrl} download={`${filename || "Mellow_Lines"}.${format}`}>
-              <Film className="w-4 h-4" />
-              Save Video
-            </a>
+          {downloadUrl && downloadFormat && (
+            <Button variant="outline" size="sm" asChild className="gap-2">
+              <a href={downloadUrl} download={`${filename || "Mellow_Lines"}.${downloadFormat}`}>
+                <Film className="w-4 h-4" />
+                {downloadLabel}
+              </a>
+            </Button>
+          )}
+          <Button
+            size="sm"
+            className={cn("min-w-[100px]", isExporting && "opacity-80")}
+            onClick={() => onExport(format)}
+            disabled={!canExport || isExporting}
+          >
+            <Download className="w-4 h-4" />
+            {isExporting ? `${statusText} ${Math.round(exportProgress * 100)}%` : "Export"}
           </Button>
-        )}
-        <Button
-          size="sm"
-          className={cn("min-w-[100px]", isExporting && "opacity-80")}
-          onClick={() => onExport(format)}
-          disabled={!canExport || isExporting}
-        >
-          <Download className="w-4 h-4" />
-          {isExporting ? `${statusText} ${Math.round(exportProgress * 100)}%` : "Export"}
-        </Button>
+        </div>
       </div>
     </div>
   );

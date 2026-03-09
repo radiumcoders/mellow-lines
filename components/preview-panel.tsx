@@ -5,6 +5,7 @@ import { CanvasPreview } from "./canvas-preview";
 import { PlayerControls } from "./player-controls";
 import type { AnimationType, TokenFlowPreset } from "@/app/lib/magicMove/types";
 import type { RenderTheme } from "@/app/lib/magicMove/codeLayout";
+import type { ExportFormat } from "@/app/lib/video/types";
 
 interface PreviewPanelProps {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
@@ -20,10 +21,11 @@ interface PreviewPanelProps {
   transitionMs: number;
   onTransitionMsChange: (value: number) => void;
   downloadUrl: string | null;
+  downloadFormat: ExportFormat | null;
   isExporting: boolean;
   exportPhase: "rendering" | "saving" | null;
   exportProgress: number;
-  onExport: (format: "webm" | "mp4") => void;
+  onExport: (format: ExportFormat) => void;
   canExport: boolean;
   filename: string;
   onFilenameChange: (value: string) => void;
@@ -59,6 +61,7 @@ export function PreviewPanel({
   transitionMs,
   onTransitionMsChange,
   downloadUrl,
+  downloadFormat,
   isExporting,
   exportPhase,
   exportProgress,
@@ -124,6 +127,7 @@ export function PreviewPanel({
           soundEnabled={soundEnabled}
           onSoundToggle={onSoundToggle}
           downloadUrl={downloadUrl}
+          downloadFormat={downloadFormat}
           isExporting={isExporting}
           exportPhase={exportPhase}
           exportProgress={exportProgress}
