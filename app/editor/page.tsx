@@ -258,9 +258,9 @@ export default function Home() {
   const { codeTheme: theme, setCodeTheme, setSiteTheme } = useDefaultCodeTheme();
   const [fps, setFps] = useState<number>(60);
   const [transitionMs, setTransitionMs] = useState<number>(700);
-  const [startHoldMs, setStartHoldMs] = useState<number>(500);
+  const [startHoldMs, setStartHoldMs] = useState<number>(750);
   const [betweenHoldMs, setBetweenHoldMs] = useState<number>(200);
-  const [endHoldMs, setEndHoldMs] = useState<number>(500);
+  const [endHoldMs, setEndHoldMs] = useState<number>(750);
   const [filename, setFilename] = useState<string>("");
   const [animationType, setAnimationType] = useState<AnimationType>("typing");
   const [tokenFlowPreset, setTokenFlowPreset] = useState<TokenFlowPreset>("studio");
