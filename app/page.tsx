@@ -149,7 +149,7 @@ export default function Page() {
             <FeatureCard
               icon={<Download className="w-6 h-6" />}
               title="High-Quality Export"
-              description="Render blazing fast, crisp MP4 & WebM videos perfectly optimized for social media."
+              description="Render blazing fast, crisp MP4, WebM, and GIF exports perfectly optimized for social media."
             />
             <FeatureCard
               icon={<Play className="w-6 h-6" />}
