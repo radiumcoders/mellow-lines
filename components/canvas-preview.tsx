@@ -33,13 +33,13 @@ const TOKEN_FLOW_PRESET_META: Record<TokenFlowPreset, {
   summary: string;
 }> = {
   precise: {
-    summary: "Quiet, exact motion for technical walkthroughs where clarity matters most.",
+    summary: "Precise, quiet motion for technical walkthroughs.",
   },
   studio: {
-    summary: "Balanced default with smooth, polished motion that feels premium without distraction.",
+    summary: "Balanced default with smooth, polished motion.",
   },
   cinematic: {
-    summary: "Broader, expressive motion with emphasis on demos, showcases, and storytelling.",
+    summary: "Expressive motion for demos and storytelling.",
   },
 };
 
