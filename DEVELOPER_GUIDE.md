@@ -73,9 +73,9 @@ Inspired by Slidev's "Shiki Magic Move" feature.
 All timing parameters are user-configurable:
 
 - **Transition duration**: 100-5000ms (morphing between steps)
-- **Start hold**: Pause before first transition (default: 500ms)
+- **Start hold**: Pause before first transition (default: 750ms)
 - **Between hold**: Pause between transitions (default: 200ms)
-- **End hold**: Pause after final step (default: 500ms)
+- **End hold**: Pause after final step (default: 750ms)
 
 **Timeline Formula**:
 ```
@@ -214,9 +214,9 @@ totalMs = startHold + (transitions × transitionMs) + (transitions × betweenHol
 | Start line | `app/editor/page.tsx` | `1` | 1+ |
 | FPS | `app/editor/page.tsx` | `60` | 30 or 60 |
 | Transition duration | `app/editor/page.tsx` | `700` | 100-5000ms |
-| Start hold | `app/editor/page.tsx` | `500` | 0+ ms |
+| Start hold | `app/editor/page.tsx` | `750` | 0+ ms |
 | Between hold | `app/editor/page.tsx` | `200` | 0+ ms |
-| End hold | `app/editor/page.tsx` | `500` | 0+ ms |
+| End hold | `app/editor/page.tsx` | `750` | 0+ ms |
 | Canvas width | `codeLayout.ts` | `1920` | fixed |
 | Min canvas height | `codeLayout.ts` | `1080` | dynamic |
 | VP9 bitrate | `recordCanvas.ts` | `10 Mbps` | fixed |
