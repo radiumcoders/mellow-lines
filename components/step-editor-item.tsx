@@ -1,5 +1,6 @@
 "use client";
 
+import { Eraser } from "lucide-react";
 import { useState } from "react";
 import { CodeEditor } from "./code-editor";
 import type { ShikiThemeChoice } from "@/app/lib/magicMove/shikiHighlighter";
@@ -9,6 +10,7 @@ interface StepEditorItemProps {
   index: number;
   code: string;
   onCodeChange: (code: string) => void;
+  onClear: () => void;
   onRemove: () => void;
   canRemove: boolean;
   language: string;
@@ -19,6 +21,7 @@ export function StepEditorItem({
   index,
   code,
   onCodeChange,
+  onClear,
   onRemove,
   canRemove,
   language,
@@ -94,9 +97,19 @@ export function StepEditorItem({
           maxLines={maxLines}
         />
       </div>
-      <span className="text-[10px] font-mono self-end p-[6px] text-muted-foreground/80">
-        {lineCount}/{maxLines} lines
-      </span>
+      <div className="flex items-center justify-end gap-1 p-[6px]">
+        <button
+          type="button"
+          onClick={onClear}
+          aria-label={`Clear step ${index + 1}`}
+          className="inline-flex h-5 w-5 items-center justify-center rounded-sm text-muted-foreground/60 hover:text-foreground focus-visible:outline-none"
+        >
+          <Eraser className="h-3.5 w-3.5" />
+        </button>
+        <span className="text-[10px] font-mono text-muted-foreground/80">
+          {lineCount}/{maxLines} lines
+        </span>
+      </div>
     </div>
   );
 }
