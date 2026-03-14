@@ -33,6 +33,7 @@ interface StepsEditorProps {
   onInsertStep: (atIndex: number) => void;
   onRemoveStep: (index: number) => void;
   onUpdateStep: (index: number, code: string) => void;
+  onClearStep: (index: number) => void;
   scrollToEndTrigger?: number;
 }
 
@@ -58,6 +59,7 @@ export function StepsEditor({
   onInsertStep,
   onRemoveStep,
   onUpdateStep,
+  onClearStep,
   scrollToEndTrigger,
 }: StepsEditorProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -111,6 +113,7 @@ export function StepsEditor({
                 index={index}
                 code={step.code}
                 onCodeChange={(code) => onUpdateStep(index, code)}
+                onClear={() => onClearStep(index)}
                 onRemove={() => onRemoveStep(index)}
                 canRemove={steps.length > 1}
                 language={selectedLang}

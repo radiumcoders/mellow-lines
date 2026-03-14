@@ -742,6 +742,11 @@ export default function Home() {
     setSimpleSteps(updated);
   };
 
+  const clearSimpleStep = (index: number) => {
+    const updated = [...simpleSteps];
+    updated[index] = { ...updated[index], code: "" };
+    setSimpleSteps(updated);
+  };
   const onExport = async (format: ExportFormat) => {
     if (!stepLayouts || stepLayouts.length === 0) return;
 
@@ -998,6 +1003,7 @@ export default function Home() {
           onInsertStep={(index) => insertSimpleStep(index)}
           onRemoveStep={removeSimpleStep}
           onUpdateStep={updateSimpleStep}
+          onClearStep={clearSimpleStep}
           scrollToEndTrigger={scrollToEndTrigger}
         />
 
