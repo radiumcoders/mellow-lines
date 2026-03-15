@@ -818,6 +818,55 @@ const THEMES: BackgroundTheme[] = [
       },
     ],
   },
+  {
+    id: "anthropic-1",
+    name: "Anthropic-1",
+    previewColor: "#D4A27F",
+    group: "org",
+    layers: [
+      // Base: keep the palette anchored tightly around the brand tone.
+      {
+        type: "linear",
+        x0: 0, y0: 0, x1: 1, y1: 1,
+        stops: [
+          { offset: 0, color: "#ddb08f" },
+          { offset: 0.32, color: "#D4A27F" },
+          { offset: 0.7, color: "#cf9b78" },
+          { offset: 1, color: "#c89270" },
+        ],
+      },
+      // Very soft lift for dimension without pulling away from the core hue.
+      {
+        type: "radial",
+        cx: 0.24, cy: 0.2, r0: 0, r1: 0.62,
+        stops: [
+          { offset: 0, color: "rgba(237, 197, 166, 0.22)" },
+          { offset: 0.42, color: "rgba(237, 197, 166, 0.08)" },
+          { offset: 1, color: "rgba(237, 197, 166, 0)" },
+        ],
+      },
+      // Broad center wash to keep the full canvas reading as Claude's tan.
+      {
+        type: "radial",
+        cx: 0.54, cy: 0.5, r0: 0, r1: 0.88,
+        stops: [
+          { offset: 0, color: "rgba(212, 162, 127, 0.28)" },
+          { offset: 0.48, color: "rgba(212, 162, 127, 0.12)" },
+          { offset: 1, color: "rgba(212, 162, 127, 0)" },
+        ],
+      },
+      // A restrained shadow pass preserves contrast behind light code cards.
+      {
+        type: "linear",
+        x0: 1, y0: 0.24, x1: 0.22, y1: 0.86,
+        stops: [
+          { offset: 0, color: "rgba(116, 81, 63, 0.16)" },
+          { offset: 0.5, color: "rgba(116, 81, 63, 0.06)" },
+          { offset: 1, color: "rgba(116, 81, 63, 0)" },
+        ],
+      },
+    ],
+  },
 ];
 
 // ---------- lookup ----------
