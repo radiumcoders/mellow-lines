@@ -1,8 +1,8 @@
 "use client";
 
 import { ResizablePanel } from "@/components/ui/resizable";
-import { CanvasPreview } from "./canvas-preview";
-import { PlayerControls } from "./player-controls";
+import { CanvasPreview } from '@/components/preview/canvas-preview';
+import { PlayerControls } from '@/components/preview/player-controls';
 import type { AnimationType, TokenFlowPreset } from "@/app/lib/magicMove/types";
 import type { RenderTheme } from "@/app/lib/magicMove/codeLayout";
 import type { ExportFormat } from "@/app/lib/video/types";

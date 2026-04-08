@@ -10,8 +10,8 @@ import {
 
 import "./globals.css";
 
-import { Header } from "@/components/header";
-import { ThemeProvider } from "@/components/theme-provider";
+import { Header } from "@/components/layout/header";
+import { ThemeProvider } from "@/components/theme/theme-provider";
 import { Analytics } from "@vercel/analytics/react";
 
 const geistSans = Geist({

@@ -5,9 +5,9 @@ import { Fragment, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ResizablePanel } from "@/components/ui/resizable";
-import { StepsEditorHeader } from "./steps-editor-header";
-import { StepEditorItem } from "./step-editor-item";
-import { StepInsertDivider } from "./step-insert-divider";
+import { StepsEditorHeader } from '@/components/editor/steps-editor-header';
+import { StepEditorItem } from '@/components/editor/step-editor-item';
+import { StepInsertDivider } from '@/components/editor/step-insert-divider';
 import type { SimpleStep } from "@/app/lib/magicMove/types";
 import type { ShikiThemeChoice } from "@/app/lib/magicMove/shikiHighlighter";
 

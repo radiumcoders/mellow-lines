@@ -2,7 +2,7 @@
 
 import { Eraser } from "lucide-react";
 import { useState } from "react";
-import { CodeEditor } from "./code-editor";
+import { CodeEditor } from '@/components/editor/code-editor';
 import type { ShikiThemeChoice } from "@/app/lib/magicMove/shikiHighlighter";
 import { getThemeBgColor, getThemeVariant } from "@/app/lib/magicMove/shikiHighlighter";
 

@@ -43,8 +43,8 @@ import { useTypingSound } from "../lib/audio/useTypingSound";
 import { generateTypingAudioTrack } from "../lib/audio/generateTypingAudioTrack";
 
 import { ResizableHandle, ResizablePanelGroup } from "@/components/ui/resizable";
-import { StepsEditor } from "@/components/steps-editor";
-import { PreviewPanel } from "@/components/preview-panel";
+import { StepsEditor } from "@/components/editor/steps-editor";
+import { PreviewPanel } from "@/components/preview/preview-panel";
 
 type StepLayout = TokenFlowStep & {
   layout: LayoutResult;

@@ -2,7 +2,7 @@
 
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
-import LightRays from "./LightRays";
+import LightRays from '@/components/media/LightRays';
 
 export function ThemedLightRays() {
   const { resolvedTheme } = useTheme();

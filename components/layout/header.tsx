@@ -1,8 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
-import { GitHubIcon, TwitterIcon } from "./ui/icons";
-import { ThemeToggle } from "./theme-toggle";
-import { Separator } from "./ui/separator";
+import { GitHubIcon, TwitterIcon } from '@/components/ui/icons';
+import { ThemeToggle } from '@/components/theme/theme-toggle';
+import { Separator } from '@/components/ui/separator';
 
 export async function Header() {
   return (
